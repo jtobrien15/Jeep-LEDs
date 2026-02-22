@@ -1,0 +1,212 @@
+/*
+ * Jeep LEDs Controller - Hardware Serial Version
+ *
+ * This version uses Hardware Serial (Serial1 if available, or Serial with conditional compilation)
+ * Hardware serial is more reliable than SoftwareSerial for Bluetooth communication.
+ *
+ * For Arduino Uno R2:
+ * - Connect Bluefruit TX to Arduino RX (pin 0)
+ * - Connect Bluefruit RX to Arduino TX (pin 1)
+ * - You'll need to disconnect these when uploading code!
+ * - Serial debugging will go through USB
+ *
+ * NOTE: You must disconnect Bluefruit RX/TX from pins 0/1 when uploading sketches!
+ */
+
+#include <Adafruit_NeoPixel.h>
+
+// Configuration
+#define LED_PIN        6        // Pin connected to Neopixel data line
+#define NUM_LEDS       30       // Number of LEDs in your strip
+
+// Initialize Neopixel strip
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+// State variables
+uint8_t red = 0, green = 0, blue = 0;  // Start with LEDs OFF
+uint8_t brightness = 255;
+String currentPattern = "SOLID";
+unsigned long lastUpdate = 0;
+int patternStep = 0;
+String inputBuffer = "";
+
+void setup() {
+  // Initialize Hardware Serial for Bluefruit (pins 0 and 1)
+  Serial.begin(9600);
+
+  delay(2000);
+
+  // Initialize Neopixel strip
+  strip.begin();
+  strip.setBrightness(brightness);
+  strip.show(); // Turn all LEDs off
+
+  // Blink the first LED to show we're ready
+  strip.setPixelColor(0, strip.Color(0, 255, 0));  // Green
+  strip.show();
+  delay(500);
+  strip.setPixelColor(0, strip.Color(0, 0, 0));
+  strip.show();
+
+  inputBuffer.reserve(64);  // Reserve space for incoming commands
+}
+
+void loop() {
+  // Read from Serial (Bluefruit)
+  while (Serial.available()) {
+    char c = Serial.read();
+
+    if (c == '\n' || c == '\r') {
+      // End of command
+      if (inputBuffer.length() > 0) {
+        processCommand(inputBuffer);
+        inputBuffer = "";
+      }
+    } else {
+      inputBuffer += c;
+
+      // Prevent buffer overflow
+      if (inputBuffer.length() > 50) {
+        inputBuffer = "";
+      }
+    }
+  }
+
+  // Update LED pattern
+  updatePattern();
+}
+
+void processCommand(String command) {
+  command.trim();
+
+  if (command.length() == 0) return;
+
+  char cmdType = command.charAt(0);
+  String cmdData = command.substring(1);
+
+  switch (cmdType) {
+    case 'C': // Color command
+      parseColor(cmdData);
+      currentPattern = "SOLID";
+      break;
+
+    case 'P': // Pattern command
+      currentPattern = cmdData;
+      patternStep = 0;
+      break;
+
+    case 'B': // Brightness command
+      brightness = cmdData.toInt();
+      brightness = constrain(brightness, 0, 255);
+      strip.setBrightness(brightness);
+      break;
+  }
+}
+
+void parseColor(String colorData) {
+  int comma1 = colorData.indexOf(',');
+  int comma2 = colorData.indexOf(',', comma1 + 1);
+
+  if (comma1 > 0 && comma2 > comma1) {
+    red = colorData.substring(0, comma1).toInt();
+    green = colorData.substring(comma1 + 1, comma2).toInt();
+    blue = colorData.substring(comma2 + 1).toInt();
+
+    red = constrain(red, 0, 255);
+    green = constrain(green, 0, 255);
+    blue = constrain(blue, 0, 255);
+  }
+}
+
+void updatePattern() {
+  unsigned long currentMillis = millis();
+
+  if (currentPattern == "SOLID") {
+    solidColor(red, green, blue);
+  }
+  else if (currentPattern == "BLINK") {
+    if (currentMillis - lastUpdate >= 500) {
+      lastUpdate = currentMillis;
+      patternStep = !patternStep;
+      if (patternStep) {
+        solidColor(red, green, blue);
+      } else {
+        solidColor(0, 0, 0);
+      }
+    }
+  }
+  else if (currentPattern == "PULSE") {
+    if (currentMillis - lastUpdate >= 20) {
+      lastUpdate = currentMillis;
+      float breath = (exp(sin(millis() / 2000.0 * PI)) - 0.36787944) * 108.0;
+      uint8_t val = map(breath, 0, 255, 0, 255);
+      solidColor(red * val / 255, green * val / 255, blue * val / 255);
+    }
+  }
+  else if (currentPattern == "RAINBOW") {
+    if (currentMillis - lastUpdate >= 20) {
+      lastUpdate = currentMillis;
+      rainbow(patternStep);
+      patternStep = (patternStep + 1) % 256;
+    }
+  }
+  else if (currentPattern == "CHASE") {
+    if (currentMillis - lastUpdate >= 50) {
+      lastUpdate = currentMillis;
+      chase(red, green, blue, patternStep);
+      patternStep = (patternStep + 1) % NUM_LEDS;
+    }
+  }
+  else if (currentPattern == "SPARKLE") {
+    if (currentMillis - lastUpdate >= 100) {
+      lastUpdate = currentMillis;
+      sparkle(red, green, blue);
+    }
+  }
+}
+
+void solidColor(uint8_t r, uint8_t g, uint8_t b) {
+  for (int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();
+}
+
+void rainbow(uint8_t offset) {
+  for (int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, Wheel((i + offset) & 255));
+  }
+  strip.show();
+}
+
+void chase(uint8_t r, uint8_t g, uint8_t b, int position) {
+  for (int i = 0; i < strip.numPixels(); i++) {
+    if (i == position) {
+      strip.setPixelColor(i, strip.Color(r, g, b));
+    } else {
+      strip.setPixelColor(i, strip.Color(0, 0, 0));
+    }
+  }
+  strip.show();
+}
+
+void sparkle(uint8_t r, uint8_t g, uint8_t b) {
+  int pixel = random(strip.numPixels());
+  strip.setPixelColor(pixel, strip.Color(r, g, b));
+  strip.show();
+  delay(50);
+  strip.setPixelColor(pixel, strip.Color(0, 0, 0));
+}
+
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if (WheelPos < 85) {
+    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if (WheelPos < 170) {
+    WheelPos -= 85;
+    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}

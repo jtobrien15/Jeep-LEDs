@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		982891E12F4B8B0600E8F5A9 /* ArduinoCode.txt in Resources */ = {isa = PBXBuildFile; fileRef = 982891E02F4B8B0600E8F5A9 /* ArduinoCode.txt */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		982891CE2F4B89F300E8F5A9 /* Jeep LEDs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Jeep LEDs.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		982891E02F4B8B0600E8F5A9 /* ArduinoCode.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ArduinoCode.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +39,7 @@
 			children = (
 				982891D02F4B89F300E8F5A9 /* Jeep LEDs */,
 				982891CF2F4B89F300E8F5A9 /* Products */,
+				982891E02F4B8B0600E8F5A9 /* ArduinoCode.txt */,
 			);
 			sourceTree = "<group>";
 		};
@@ -109,6 +115,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				982891E12F4B8B0600E8F5A9 /* ArduinoCode.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -254,6 +261,9 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Jeep-LEDs-Info.plist";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app needs ​Bluetooth access to connect to and control your ​Jeep​'s ​Neopixel ​LEDs via the ​Adafruit ​Bluefruit module.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "This app needs ​Bluetooth access to communicate with the ​Adafruit ​Bluefruit module controlling your ​LED lights.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -298,6 +308,9 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Jeep-LEDs-Info.plist";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app needs ​Bluetooth access to connect to and control your ​Jeep​'s ​Neopixel ​LEDs via the ​Adafruit ​Bluefruit module.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "This app needs ​Bluetooth access to communicate with the ​Adafruit ​Bluefruit module controlling your ​LED lights.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

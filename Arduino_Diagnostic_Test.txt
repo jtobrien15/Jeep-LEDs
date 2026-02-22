@@ -1,0 +1,76 @@
+/*
+ * Bluefruit Diagnostic Test
+ *
+ * This sketch helps diagnose Bluefruit communication issues.
+ * Upload this first to verify your Bluefruit connection is working.
+ */
+
+#include <SoftwareSerial.h>
+
+#define BLUEFRUIT_RX   10  // Connect to Bluefruit TX
+#define BLUEFRUIT_TX   11  // Connect to Bluefruit RX
+
+SoftwareSerial bluefruitSerial = SoftwareSerial(BLUEFRUIT_RX, BLUEFRUIT_TX);
+
+void setup() {
+  Serial.begin(9600);
+  delay(2000);
+
+  Serial.println("========================================");
+  Serial.println("Bluefruit UART Diagnostic Test");
+  Serial.println("========================================");
+  Serial.println();
+
+  // Try different baud rates
+  Serial.println("Testing Bluefruit at 9600 baud...");
+  bluefruitSerial.begin(9600);
+
+  delay(500);
+
+  Serial.println("Setup complete!");
+  Serial.println("Waiting for data from Bluefruit...");
+  Serial.println();
+  Serial.println("NOTE: Adafruit Bluefruit modules typically");
+  Serial.println("use AT commands. If you see 'AT+' commands,");
+  Serial.println("your module is in command mode, not data mode.");
+  Serial.println("========================================");
+}
+
+void loop() {
+  // Echo everything from Bluefruit to Serial Monitor
+  if (bluefruitSerial.available()) {
+    Serial.println("\n*** DATA RECEIVED FROM BLUEFRUIT ***");
+
+    while (bluefruitSerial.available()) {
+      char c = bluefruitSerial.read();
+
+      // Print character info
+      Serial.print("Char: '");
+      if (c >= 32 && c <= 126) {
+        Serial.print(c);
+      } else {
+        Serial.print("?");
+      }
+      Serial.print("' (ASCII: ");
+      Serial.print((int)c);
+      Serial.print(", HEX: 0x");
+      Serial.print(c, HEX);
+      Serial.println(")");
+
+      delay(2);  // Small delay to catch all bytes
+    }
+
+    Serial.println("*** END OF DATA ***\n");
+  }
+
+  // Echo everything from Serial Monitor to Bluefruit
+  if (Serial.available()) {
+    Serial.println("Sending to Bluefruit...");
+    while (Serial.available()) {
+      char c = Serial.read();
+      bluefruitSerial.write(c);
+      Serial.print("Sent: ");
+      Serial.println(c);
+    }
+  }
+}

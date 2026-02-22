@@ -1,0 +1,500 @@
+/*
+ * Jeep LEDs Controller - Arduino Sketch
+ * 
+ * This Arduino sketch controls Neopixel LEDs via Bluetooth using an Adafruit Bluefruit module.
+ * Compatible with Arduino Uno R2 and Adafruit Neopixel strips.
+ * 
+ * Hardware Requirements:
+ * - Arduino Uno R2
+ * - Adafruit Bluefruit LE UART Friend or similar
+ * - Adafruit Neopixel LED strip
+ * 
+ * Wiring:
+ * - Bluefruit TX -> Arduino pin 10 (BLUEFRUIT_RX)
+ * - Bluefruit RX -> Arduino pin 11 (BLUEFRUIT_TX)
+ * - Neopixel Data -> Arduino pin 6
+ * - Neopixel Power -> External 5V power supply (share ground with Arduino)
+ * 
+ * Libraries needed (install via Arduino Library Manager):
+ * - Adafruit NeoPixel
+ * 
+ * Command Protocol:
+ * - C<red>,<green>,<blue>\n - Set solid color (e.g., "C255,0,0\n" for red)
+ * - P<pattern>\n - Set pattern (e.g., "PRAINBOW\n")
+ * - B<brightness>\n - Set brightness 0-255 (e.g., "B128\n")
+ */
+
+#include <Adafruit_NeoPixel.h>
+#include <SoftwareSerial.h>
+
+// Configuration
+#define LED_PIN        6        // Pin connected to Neopixel data line
+#define NUM_LEDS       8        // CORRECTED: Number of LEDs in your strip
+#define BLUEFRUIT_RX   10       // Bluefruit UART RX (connect to Bluefruit TX)
+#define BLUEFRUIT_TX   11       // Bluefruit UART TX (connect to Bluefruit RX)
+
+// COLOR CALIBRATION
+// Adjust these multipliers to fix color mismatch (0.0 to 1.0)
+// If red looks pink (too much blue), reduce RED_TO_BLUE
+// If green looks teal (too much blue), reduce GREEN_TO_BLUE
+#define RED_SCALE     1.0   // Scale red brightness
+#define GREEN_SCALE   1.0   // Scale green brightness
+#define BLUE_SCALE    1.0   // Scale blue brightness
+#define RED_TO_GREEN  0.0   // How much green bleeds into red (0.0-1.0)
+#define RED_TO_BLUE   0.0   // How much blue bleeds into red (0.0-1.0)
+#define GREEN_TO_RED  0.0   // How much red bleeds into green (0.0-1.0)
+#define GREEN_TO_BLUE 0.0   // How much blue bleeds into green (0.0-1.0)
+#define BLUE_TO_RED   0.0   // How much red bleeds into blue (0.0-1.0)
+#define BLUE_TO_GREEN 0.0   // How much green bleeds into blue (0.0-1.0)
+
+// Initialize Neopixel strip
+// RGBW strips can have different channel orders: NEO_GRBW, NEO_RGBW, NEO_BRGW, etc.
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_RGBW + NEO_KHZ800);
+
+// Initialize Software Serial for Bluefruit
+SoftwareSerial bluefruitSerial = SoftwareSerial(BLUEFRUIT_RX, BLUEFRUIT_TX);
+
+// State variables
+uint8_t red = 0, green = 0, blue = 0;  // Start with LEDs OFF
+uint8_t brightness = 255;
+String currentPattern = "SOLID";
+unsigned long lastUpdate = 0;
+int patternStep = 0;
+
+void setup() {
+  // Initialize Serial for debugging
+  Serial.begin(9600);
+  delay(1000); // Wait for serial to initialize
+
+  Serial.println("===================================");
+  Serial.println("Jeep LEDs Controller Starting...");
+  Serial.println("===================================");
+
+  // Initialize Bluefruit UART
+  bluefruitSerial.begin(9600);
+  Serial.println("Bluefruit Serial initialized at 9600 baud");
+
+  // Initialize Neopixel strip
+  strip.begin();
+  strip.setBrightness(brightness);
+  strip.show(); // Initialize all pixels to 'off'
+
+  Serial.print("Neopixel strip initialized - Pin: ");
+  Serial.print(LED_PIN);
+  Serial.print(", LEDs: ");
+  Serial.print(NUM_LEDS);
+  Serial.print(", Brightness: ");
+  Serial.println(brightness);
+
+  Serial.print("Initial color - R:");
+  Serial.print(red);
+  Serial.print(" G:");
+  Serial.print(green);
+  Serial.print(" B:");
+  Serial.println(blue);
+
+  Serial.println("===================================");
+  Serial.println("Ready to receive commands");
+  Serial.println("Waiting for Bluetooth data...");
+  Serial.println("===================================");
+}
+
+void loop() {
+  // Check for incoming Bluetooth commands
+  if (bluefruitSerial.available()) {
+    Serial.println("\n*** Bluetooth data available! ***");
+    int bytesAvailable = bluefruitSerial.available();
+    Serial.print("Bytes available: ");
+    Serial.println(bytesAvailable);
+
+    String command = bluefruitSerial.readStringUntil('\n');
+    command.trim();
+
+    Serial.print("Raw command received (length=");
+    Serial.print(command.length());
+    Serial.print("): '");
+    Serial.print(command);
+    Serial.println("'");
+
+    // Print each character for debugging
+    Serial.print("Hex bytes: ");
+    for (unsigned int i = 0; i < command.length(); i++) {
+      Serial.print(command[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+
+    processCommand(command);
+  }
+
+  // Update LED pattern
+  updatePattern();
+}
+
+void processCommand(String command) {
+  if (command.length() == 0) {
+    Serial.println("ERROR: Empty command received!");
+    return;
+  }
+
+  Serial.println("\n--- Processing Command ---");
+
+  char cmdType = command.charAt(0);
+  String cmdData = command.substring(1);
+
+  Serial.print("Command type: '");
+  Serial.print(cmdType);
+  Serial.println("'");
+  Serial.print("Command data: '");
+  Serial.print(cmdData);
+  Serial.println("'");
+
+  switch (cmdType) {
+    case 'C': // Color command
+      Serial.println("-> Color command detected");
+      parseColor(cmdData);
+      currentPattern = "SOLID";
+      Serial.print("Pattern set to: ");
+      Serial.println(currentPattern);
+      break;
+
+    case 'P': // Pattern command
+      Serial.println("-> Pattern command detected");
+      currentPattern = cmdData;
+      patternStep = 0;
+      Serial.print("Pattern set to: ");
+      Serial.println(currentPattern);
+      Serial.println("Pattern step reset to 0");
+      break;
+
+    case 'B': // Brightness command
+      Serial.println("-> Brightness command detected");
+      int oldBrightness = brightness;
+      brightness = cmdData.toInt();
+      brightness = constrain(brightness, 0, 255);
+      strip.setBrightness(brightness);
+      Serial.print("Brightness changed from ");
+      Serial.print(oldBrightness);
+      Serial.print(" to ");
+      Serial.print(brightness);
+      Serial.println(" (0=off, 255=brightest)");
+      strip.show(); // Apply brightness change immediately
+      break;
+
+    default:
+      Serial.print("ERROR: Unknown command type '");
+      Serial.print(cmdType);
+      Serial.print("' in command: ");
+      Serial.println(command);
+      break;
+  }
+
+  Serial.println("--- Command Processing Complete ---\n");
+}
+
+void parseColor(String colorData) {
+  Serial.print("Parsing color data: '");
+  Serial.print(colorData);
+  Serial.println("'");
+
+  // Filter out non-printable characters (corruption from SoftwareSerial)
+  String cleanData = "";
+  for (unsigned int i = 0; i < colorData.length(); i++) {
+    char c = colorData.charAt(i);
+    // Keep only digits, commas, and spaces
+    if ((c >= '0' && c <= '9') || c == ',' || c == ' ') {
+      cleanData += c;
+    } else {
+      Serial.print("Filtered out corrupted byte: 0x");
+      Serial.println((byte)c, HEX);
+    }
+  }
+
+  if (cleanData != colorData) {
+    Serial.print("Cleaned data: '");
+    Serial.print(cleanData);
+    Serial.println("'");
+    colorData = cleanData;
+  }
+
+  int comma1 = colorData.indexOf(',');
+  int comma2 = colorData.indexOf(',', comma1 + 1);
+
+  Serial.print("Comma positions: ");
+  Serial.print(comma1);
+  Serial.print(", ");
+  Serial.println(comma2);
+
+  if (comma1 > 0 && comma2 > comma1) {
+    String redStr = colorData.substring(0, comma1);
+    String greenStr = colorData.substring(comma1 + 1, comma2);
+    String blueStr = colorData.substring(comma2 + 1);
+
+    Serial.print("Parsed strings - R:'");
+    Serial.print(redStr);
+    Serial.print("' G:'");
+    Serial.print(greenStr);
+    Serial.print("' B:'");
+    Serial.print(blueStr);
+    Serial.println("'");
+
+    uint8_t oldRed = red, oldGreen = green, oldBlue = blue;
+
+    // Parse RGB values from app
+    red = redStr.toInt();
+    green = greenStr.toInt();
+    blue = blueStr.toInt();
+
+    red = constrain(red, 0, 255);
+    green = constrain(green, 0, 255);
+    blue = constrain(blue, 0, 255);
+
+    Serial.print("Color set to RGB(");
+    Serial.print(red);
+    Serial.print(",");
+    Serial.print(green);
+    Serial.print(",");
+    Serial.print(blue);
+    Serial.println(")");
+  } else {
+    Serial.println("ERROR: Invalid color format! Expected: R,G,B");
+  }
+}
+
+void updatePattern() {
+  unsigned long currentMillis = millis();
+
+  if (currentPattern == "SOLID") {
+    // Solid color - update immediately
+    solidColor(red, green, blue);
+  }
+  else if (currentPattern == "BLINK") {
+    // Blink pattern - 500ms interval
+    if (currentMillis - lastUpdate >= 500) {
+      lastUpdate = currentMillis;
+      patternStep = !patternStep;
+      if (patternStep) {
+        solidColor(red, green, blue);
+      } else {
+        solidColor(0, 0, 0);
+      }
+    }
+  }
+  else if (currentPattern == "BREATHE") {
+    // Breathe pattern - smooth fade in/out
+    if (currentMillis - lastUpdate >= 20) {
+      lastUpdate = currentMillis;
+      float breath = (exp(sin(millis() / 2000.0 * PI)) - 0.36787944) * 108.0;
+      uint8_t val = map(breath, 0, 255, 0, 255);
+      solidColor(red * val / 255, green * val / 255, blue * val / 255);
+    }
+  }
+  else if (currentPattern == "STROBE") {
+    // Strobe pattern - fast flashing (100ms on/off)
+    if (currentMillis - lastUpdate >= 100) {
+      lastUpdate = currentMillis;
+      patternStep = !patternStep;
+      if (patternStep) {
+        solidColor(red, green, blue);
+      } else {
+        solidColor(0, 0, 0);
+      }
+    }
+  }
+  else if (currentPattern == "POLICE") {
+    // Police pattern - alternating red/blue on left/right halves
+    if (currentMillis - lastUpdate >= 100) {
+      lastUpdate = currentMillis;
+      patternStep = !patternStep;
+      policeFlash(patternStep);
+    }
+  }
+  else if (currentPattern == "HAZARD") {
+    // Hazard pattern - all flash amber/yellow together
+    if (currentMillis - lastUpdate >= 400) {
+      lastUpdate = currentMillis;
+      patternStep = !patternStep;
+      if (patternStep) {
+        solidColor(255, 191, 0); // Amber/yellow color
+      } else {
+        solidColor(0, 0, 0);
+      }
+    }
+  }
+  else if (currentPattern == "ALTERNATE") {
+    // Alternate pattern - split strip flashes alternating
+    if (currentMillis - lastUpdate >= 300) {
+      lastUpdate = currentMillis;
+      patternStep = !patternStep;
+      alternateFlash(patternStep);
+    }
+  }
+  else if (currentPattern == "RAINBOW") {
+    // Rainbow cycle pattern
+    if (currentMillis - lastUpdate >= 20) {
+      lastUpdate = currentMillis;
+      rainbow(patternStep);
+      patternStep = (patternStep + 1) % 256;
+    }
+  }
+  else if (currentPattern == "CHASE") {
+    // Chase pattern
+    if (currentMillis - lastUpdate >= 50) {
+      lastUpdate = currentMillis;
+      chase(red, green, blue, patternStep);
+      patternStep = (patternStep + 1) % NUM_LEDS;
+    }
+  }
+  else if (currentPattern == "SPARKLE") {
+    // Sparkle pattern
+    if (currentMillis - lastUpdate >= 100) {
+      lastUpdate = currentMillis;
+      sparkle(red, green, blue);
+    }
+  }
+  else if (currentPattern == "FADE") {
+    // Fade in/out pattern - slower than breathe
+    if (currentMillis - lastUpdate >= 30) {
+      lastUpdate = currentMillis;
+      uint8_t val = (sin(millis() / 1000.0) + 1.0) * 127.5;
+      solidColor(red * val / 255, green * val / 255, blue * val / 255);
+    }
+  }
+  else if (currentPattern == "RUNNING") {
+    // Running lights - like a theater chase
+    if (currentMillis - lastUpdate >= 100) {
+      lastUpdate = currentMillis;
+      runningLights(red, green, blue, patternStep);
+      patternStep = (patternStep + 1) % 3;
+    }
+  }
+}
+
+// Pattern functions
+void solidColor(uint8_t r, uint8_t g, uint8_t b) {
+  static uint8_t lastR = 255, lastG = 255, lastB = 255;
+  static bool firstCall = true;
+
+  // Apply color calibration
+  float finalR = r * RED_SCALE + g * GREEN_TO_RED + b * BLUE_TO_RED;
+  float finalG = g * GREEN_SCALE + r * RED_TO_GREEN + b * BLUE_TO_GREEN;
+  float finalB = b * BLUE_SCALE + r * RED_TO_BLUE + g * GREEN_TO_BLUE;
+
+  // Constrain to valid range
+  finalR = constrain(finalR, 0, 255);
+  finalG = constrain(finalG, 0, 255);
+  finalB = constrain(finalB, 0, 255);
+
+  uint8_t calibratedR = (uint8_t)finalR;
+  uint8_t calibratedG = (uint8_t)finalG;
+  uint8_t calibratedB = (uint8_t)finalB;
+
+  // Only print when color changes
+  if (firstCall || r != lastR || g != lastG || b != lastB) {
+    Serial.print("Input RGB(");
+    Serial.print(r);
+    Serial.print(",");
+    Serial.print(g);
+    Serial.print(",");
+    Serial.print(b);
+    Serial.print(") -> Calibrated RGB(");
+    Serial.print(calibratedR);
+    Serial.print(",");
+    Serial.print(calibratedG);
+    Serial.print(",");
+    Serial.print(calibratedB);
+    Serial.println(")");
+
+    lastR = r;
+    lastG = g;
+    lastB = b;
+    firstCall = false;
+  }
+
+  for (int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, strip.Color(calibratedR, calibratedG, calibratedB, 0));
+  }
+  strip.show();
+}
+
+void rainbow(uint8_t offset) {
+  for (int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, Wheel((i + offset) & 255));
+  }
+  strip.show();
+}
+
+void chase(uint8_t r, uint8_t g, uint8_t b, int position) {
+  for (int i = 0; i < strip.numPixels(); i++) {
+    if (i == position) {
+      strip.setPixelColor(i, strip.Color(r, g, b));
+    } else {
+      strip.setPixelColor(i, strip.Color(0, 0, 0));
+    }
+  }
+  strip.show();
+}
+
+void sparkle(uint8_t r, uint8_t g, uint8_t b) {
+  int pixel = random(strip.numPixels());
+  strip.setPixelColor(pixel, strip.Color(r, g, b));
+  strip.show();
+  delay(50);
+  strip.setPixelColor(pixel, strip.Color(0, 0, 0));
+}
+
+// Police flash - alternating red/blue on left/right halves
+void policeFlash(bool step) {
+  int halfPoint = NUM_LEDS / 2;
+  for (int i = 0; i < NUM_LEDS; i++) {
+    if (i < halfPoint) {
+      // Left half
+      strip.setPixelColor(i, step ? strip.Color(255, 0, 0) : strip.Color(0, 0, 0));
+    } else {
+      // Right half
+      strip.setPixelColor(i, step ? strip.Color(0, 0, 0) : strip.Color(0, 0, 255));
+    }
+  }
+  strip.show();
+}
+
+// Alternate flash - left/right halves flash in user color
+void alternateFlash(bool step) {
+  int halfPoint = NUM_LEDS / 2;
+  for (int i = 0; i < NUM_LEDS; i++) {
+    if (i < halfPoint) {
+      // Left half
+      strip.setPixelColor(i, step ? strip.Color(red, green, blue) : strip.Color(0, 0, 0));
+    } else {
+      // Right half
+      strip.setPixelColor(i, step ? strip.Color(0, 0, 0) : strip.Color(red, green, blue));
+    }
+  }
+  strip.show();
+}
+
+// Running lights - theater chase style
+void runningLights(uint8_t r, uint8_t g, uint8_t b, int step) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    if ((i % 3) == step) {
+      strip.setPixelColor(i, strip.Color(r, g, b));
+    } else {
+      strip.setPixelColor(i, strip.Color(0, 0, 0));
+    }
+  }
+  strip.show();
+}
+
+// Helper function for rainbow
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if (WheelPos < 85) {
+    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if (WheelPos < 170) {
+    WheelPos -= 85;
+    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
