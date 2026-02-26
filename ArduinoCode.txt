@@ -49,7 +49,8 @@
 
 // Initialize Neopixel strip
 // RGBW strips can have different channel orders: NEO_GRBW, NEO_RGBW, NEO_BRGW, etc.
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_RGBW + NEO_KHZ800);
+// Using NEO_GRBW based on LED type test results
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRBW + NEO_KHZ800);
 
 // Initialize Software Serial for Bluefruit
 SoftwareSerial bluefruitSerial = SoftwareSerial(BLUEFRUIT_RX, BLUEFRUIT_TX);
@@ -60,6 +61,7 @@ uint8_t brightness = 255;
 String currentPattern = "SOLID";
 unsigned long lastUpdate = 0;
 int patternStep = 0;
+float speedMultiplier = 1.0;  // 1.0 = normal, 0.5 = fast, 2.0 = slow
 
 void setup() {
   // Initialize Serial for debugging
@@ -102,27 +104,11 @@ void setup() {
 void loop() {
   // Check for incoming Bluetooth commands
   if (bluefruitSerial.available()) {
-    Serial.println("\n*** Bluetooth data available! ***");
-    int bytesAvailable = bluefruitSerial.available();
-    Serial.print("Bytes available: ");
-    Serial.println(bytesAvailable);
+    // Wait for complete message to arrive (iOS sends byte-by-byte)
+    delay(300);
 
     String command = bluefruitSerial.readStringUntil('\n');
     command.trim();
-
-    Serial.print("Raw command received (length=");
-    Serial.print(command.length());
-    Serial.print("): '");
-    Serial.print(command);
-    Serial.println("'");
-
-    // Print each character for debugging
-    Serial.print("Hex bytes: ");
-    for (unsigned int i = 0; i < command.length(); i++) {
-      Serial.print(command[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
 
     processCommand(command);
   }
@@ -132,132 +118,81 @@ void loop() {
 }
 
 void processCommand(String command) {
-  if (command.length() == 0) {
-    Serial.println("ERROR: Empty command received!");
-    return;
-  }
-
-  Serial.println("\n--- Processing Command ---");
+  if (command.length() == 0) return;
 
   char cmdType = command.charAt(0);
   String cmdData = command.substring(1);
 
-  Serial.print("Command type: '");
-  Serial.print(cmdType);
-  Serial.println("'");
-  Serial.print("Command data: '");
-  Serial.print(cmdData);
-  Serial.println("'");
+  // CORRUPTED BYTE DETECTION AND RECOVERY
+  // If first byte is corrupted (not C, P, B, or S), try to infer the command type
+  if (cmdType != 'C' && cmdType != 'P' && cmdType != 'B' && cmdType != 'S') {
+    // Check if the rest of the data looks like a color command (contains two commas)
+    int comma1 = cmdData.indexOf(',');
+    int comma2 = cmdData.indexOf(',', comma1 + 1);
 
-  switch (cmdType) {
-    case 'C': // Color command
-      Serial.println("-> Color command detected");
-      parseColor(cmdData);
-      currentPattern = "SOLID";
-      Serial.print("Pattern set to: ");
-      Serial.println(currentPattern);
-      break;
-
-    case 'P': // Pattern command
-      Serial.println("-> Pattern command detected");
-      currentPattern = cmdData;
-      patternStep = 0;
-      Serial.print("Pattern set to: ");
-      Serial.println(currentPattern);
-      Serial.println("Pattern step reset to 0");
-      break;
-
-    case 'B': // Brightness command
-      Serial.println("-> Brightness command detected");
-      int oldBrightness = brightness;
-      brightness = cmdData.toInt();
-      brightness = constrain(brightness, 0, 255);
-      strip.setBrightness(brightness);
-      Serial.print("Brightness changed from ");
-      Serial.print(oldBrightness);
-      Serial.print(" to ");
-      Serial.print(brightness);
-      Serial.println(" (0=off, 255=brightest)");
-      strip.show(); // Apply brightness change immediately
-      break;
-
-    default:
-      Serial.print("ERROR: Unknown command type '");
-      Serial.print(cmdType);
-      Serial.print("' in command: ");
-      Serial.println(command);
-      break;
-  }
-
-  Serial.println("--- Command Processing Complete ---\n");
-}
-
-void parseColor(String colorData) {
-  Serial.print("Parsing color data: '");
-  Serial.print(colorData);
-  Serial.println("'");
-
-  // Filter out non-printable characters (corruption from SoftwareSerial)
-  String cleanData = "";
-  for (unsigned int i = 0; i < colorData.length(); i++) {
-    char c = colorData.charAt(i);
-    // Keep only digits, commas, and spaces
-    if ((c >= '0' && c <= '9') || c == ',' || c == ' ') {
-      cleanData += c;
-    } else {
-      Serial.print("Filtered out corrupted byte: 0x");
-      Serial.println((byte)c, HEX);
+    if (comma1 > 0 && comma2 > comma1) {
+      cmdType = 'C';
+    }
+    // Check if data is all uppercase letters (likely a pattern name)
+    else if (cmdData.length() > 2 && isUpperCase(cmdData)) {
+      cmdType = 'P';
+    }
+    // Check if data is all digits (likely brightness)
+    else if (cmdData.length() > 0 && isDigits(cmdData)) {
+      cmdType = 'B';
+    }
+    else {
+      return;
     }
   }
 
-  if (cleanData != colorData) {
-    Serial.print("Cleaned data: '");
-    Serial.print(cleanData);
-    Serial.println("'");
-    colorData = cleanData;
+  switch (cmdType) {
+    case 'C': // Color command
+      parseColor(cmdData);
+      // Don't reset pattern - let current pattern continue with new color
+      break;
+
+    case 'P': // Pattern command
+      currentPattern = cmdData;
+      patternStep = 0;
+      break;
+
+    case 'B': // Brightness command
+      brightness = cmdData.toInt();
+      brightness = constrain(brightness, 0, 255);
+      strip.setBrightness(brightness);
+      strip.show();
+      break;
+
+    case 'S': // Speed command (percentage: 50=fast, 100=normal, 200=slow)
+      int speedPercent = cmdData.toInt();
+      speedMultiplier = speedPercent / 100.0;
+      speedMultiplier = constrain(speedMultiplier, 0.25, 4.0); // Limit range
+      break;
+  }
+}
+
+void parseColor(String colorData) {
+  // Filter out non-printable characters
+  String cleanData = "";
+  for (unsigned int i = 0; i < colorData.length(); i++) {
+    char c = colorData.charAt(i);
+    if ((c >= '0' && c <= '9') || c == ',') {
+      cleanData += c;
+    }
   }
 
-  int comma1 = colorData.indexOf(',');
-  int comma2 = colorData.indexOf(',', comma1 + 1);
-
-  Serial.print("Comma positions: ");
-  Serial.print(comma1);
-  Serial.print(", ");
-  Serial.println(comma2);
+  int comma1 = cleanData.indexOf(',');
+  int comma2 = cleanData.indexOf(',', comma1 + 1);
 
   if (comma1 > 0 && comma2 > comma1) {
-    String redStr = colorData.substring(0, comma1);
-    String greenStr = colorData.substring(comma1 + 1, comma2);
-    String blueStr = colorData.substring(comma2 + 1);
-
-    Serial.print("Parsed strings - R:'");
-    Serial.print(redStr);
-    Serial.print("' G:'");
-    Serial.print(greenStr);
-    Serial.print("' B:'");
-    Serial.print(blueStr);
-    Serial.println("'");
-
-    uint8_t oldRed = red, oldGreen = green, oldBlue = blue;
-
-    // Parse RGB values from app
-    red = redStr.toInt();
-    green = greenStr.toInt();
-    blue = blueStr.toInt();
+    red = cleanData.substring(0, comma1).toInt();
+    green = cleanData.substring(comma1 + 1, comma2).toInt();
+    blue = cleanData.substring(comma2 + 1).toInt();
 
     red = constrain(red, 0, 255);
     green = constrain(green, 0, 255);
     blue = constrain(blue, 0, 255);
-
-    Serial.print("Color set to RGB(");
-    Serial.print(red);
-    Serial.print(",");
-    Serial.print(green);
-    Serial.print(",");
-    Serial.print(blue);
-    Serial.println(")");
-  } else {
-    Serial.println("ERROR: Invalid color format! Expected: R,G,B");
   }
 }
 
@@ -269,8 +204,8 @@ void updatePattern() {
     solidColor(red, green, blue);
   }
   else if (currentPattern == "BLINK") {
-    // Blink pattern - 500ms interval
-    if (currentMillis - lastUpdate >= 500) {
+    // Blink pattern - 500ms interval (adjustable by speed)
+    if (currentMillis - lastUpdate >= (500 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
       if (patternStep) {
@@ -281,17 +216,17 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "BREATHE") {
-    // Breathe pattern - smooth fade in/out
-    if (currentMillis - lastUpdate >= 20) {
+    // Breathe pattern - smooth fade in/out (adjustable by speed)
+    if (currentMillis - lastUpdate >= (20 * speedMultiplier)) {
       lastUpdate = currentMillis;
-      float breath = (exp(sin(millis() / 2000.0 * PI)) - 0.36787944) * 108.0;
+      float breath = (exp(sin(millis() / (2000.0 * speedMultiplier) * PI)) - 0.36787944) * 108.0;
       uint8_t val = map(breath, 0, 255, 0, 255);
       solidColor(red * val / 255, green * val / 255, blue * val / 255);
     }
   }
   else if (currentPattern == "STROBE") {
-    // Strobe pattern - fast flashing (100ms on/off)
-    if (currentMillis - lastUpdate >= 100) {
+    // Strobe pattern - fast flashing (adjustable by speed)
+    if (currentMillis - lastUpdate >= (100 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
       if (patternStep) {
@@ -302,16 +237,16 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "POLICE") {
-    // Police pattern - alternating red/blue on left/right halves
-    if (currentMillis - lastUpdate >= 100) {
+    // Police pattern - alternating red/blue (adjustable by speed)
+    if (currentMillis - lastUpdate >= (100 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
       policeFlash(patternStep);
     }
   }
   else if (currentPattern == "HAZARD") {
-    // Hazard pattern - all flash amber/yellow together
-    if (currentMillis - lastUpdate >= 400) {
+    // Hazard pattern - amber flash (adjustable by speed)
+    if (currentMillis - lastUpdate >= (400 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
       if (patternStep) {
@@ -322,47 +257,47 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "ALTERNATE") {
-    // Alternate pattern - split strip flashes alternating
-    if (currentMillis - lastUpdate >= 300) {
+    // Alternate pattern - split strip flashes (adjustable by speed)
+    if (currentMillis - lastUpdate >= (300 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
       alternateFlash(patternStep);
     }
   }
   else if (currentPattern == "RAINBOW") {
-    // Rainbow cycle pattern
-    if (currentMillis - lastUpdate >= 20) {
+    // Rainbow cycle pattern (adjustable by speed)
+    if (currentMillis - lastUpdate >= (20 * speedMultiplier)) {
       lastUpdate = currentMillis;
       rainbow(patternStep);
       patternStep = (patternStep + 1) % 256;
     }
   }
   else if (currentPattern == "CHASE") {
-    // Chase pattern
-    if (currentMillis - lastUpdate >= 50) {
+    // Chase pattern (adjustable by speed)
+    if (currentMillis - lastUpdate >= (50 * speedMultiplier)) {
       lastUpdate = currentMillis;
       chase(red, green, blue, patternStep);
       patternStep = (patternStep + 1) % NUM_LEDS;
     }
   }
   else if (currentPattern == "SPARKLE") {
-    // Sparkle pattern
-    if (currentMillis - lastUpdate >= 100) {
+    // Sparkle pattern (adjustable by speed)
+    if (currentMillis - lastUpdate >= (100 * speedMultiplier)) {
       lastUpdate = currentMillis;
       sparkle(red, green, blue);
     }
   }
   else if (currentPattern == "FADE") {
-    // Fade in/out pattern - slower than breathe
-    if (currentMillis - lastUpdate >= 30) {
+    // Fade in/out pattern (adjustable by speed)
+    if (currentMillis - lastUpdate >= (30 * speedMultiplier)) {
       lastUpdate = currentMillis;
-      uint8_t val = (sin(millis() / 1000.0) + 1.0) * 127.5;
+      uint8_t val = (sin(millis() / (1000.0 * speedMultiplier)) + 1.0) * 127.5;
       solidColor(red * val / 255, green * val / 255, blue * val / 255);
     }
   }
   else if (currentPattern == "RUNNING") {
-    // Running lights - like a theater chase
-    if (currentMillis - lastUpdate >= 100) {
+    // Running lights - theater chase (adjustable by speed)
+    if (currentMillis - lastUpdate >= (100 * speedMultiplier)) {
       lastUpdate = currentMillis;
       runningLights(red, green, blue, patternStep);
       patternStep = (patternStep + 1) % 3;
@@ -372,47 +307,8 @@ void updatePattern() {
 
 // Pattern functions
 void solidColor(uint8_t r, uint8_t g, uint8_t b) {
-  static uint8_t lastR = 255, lastG = 255, lastB = 255;
-  static bool firstCall = true;
-
-  // Apply color calibration
-  float finalR = r * RED_SCALE + g * GREEN_TO_RED + b * BLUE_TO_RED;
-  float finalG = g * GREEN_SCALE + r * RED_TO_GREEN + b * BLUE_TO_GREEN;
-  float finalB = b * BLUE_SCALE + r * RED_TO_BLUE + g * GREEN_TO_BLUE;
-
-  // Constrain to valid range
-  finalR = constrain(finalR, 0, 255);
-  finalG = constrain(finalG, 0, 255);
-  finalB = constrain(finalB, 0, 255);
-
-  uint8_t calibratedR = (uint8_t)finalR;
-  uint8_t calibratedG = (uint8_t)finalG;
-  uint8_t calibratedB = (uint8_t)finalB;
-
-  // Only print when color changes
-  if (firstCall || r != lastR || g != lastG || b != lastB) {
-    Serial.print("Input RGB(");
-    Serial.print(r);
-    Serial.print(",");
-    Serial.print(g);
-    Serial.print(",");
-    Serial.print(b);
-    Serial.print(") -> Calibrated RGB(");
-    Serial.print(calibratedR);
-    Serial.print(",");
-    Serial.print(calibratedG);
-    Serial.print(",");
-    Serial.print(calibratedB);
-    Serial.println(")");
-
-    lastR = r;
-    lastG = g;
-    lastB = b;
-    firstCall = false;
-  }
-
-  for (int i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, strip.Color(calibratedR, calibratedG, calibratedB, 0));
+  for (int i = 0; i < NUM_LEDS; i++) {
+    strip.setPixelColor(i, strip.Color(r, g, b, 0));
   }
   strip.show();
 }
@@ -497,4 +393,24 @@ uint32_t Wheel(byte WheelPos) {
   }
   WheelPos -= 170;
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
+
+// Helper function to check if string is all uppercase letters
+bool isUpperCase(String str) {
+  for (unsigned int i = 0; i < str.length(); i++) {
+    if (!isUpperCase(str.charAt(i))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Helper function to check if string is all digits
+bool isDigits(String str) {
+  for (unsigned int i = 0; i < str.length(); i++) {
+    if (!isDigit(str.charAt(i))) {
+      return false;
+    }
+  }
+  return true;
 }

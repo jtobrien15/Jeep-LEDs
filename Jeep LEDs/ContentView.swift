@@ -15,6 +15,22 @@ struct ContentView: View {
     @State private var showingDeviceList = false
     @State private var showingSettings = false
     @State private var selectedPattern: String? = nil
+    @State private var isRefreshing = false
+    @State private var patternSpeed: PatternSpeed = .medium
+    
+    enum PatternSpeed: String, CaseIterable {
+        case slow = "Slow"
+        case medium = "Medium"
+        case fast = "Fast"
+        
+        var multiplier: Double {
+            switch self {
+            case .slow: return 2.0      // 2x slower (longer delays)
+            case .medium: return 1.0    // Normal speed
+            case .fast: return 0.5      // 2x faster (shorter delays)
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -34,11 +50,13 @@ struct ContentView: View {
                             QuickActionsRow(
                                 onAllOff: {
                                     selectedPattern = nil
+                                    selectedColor = .black // Black represents "off" state
                                     bluetoothManager.setColor(red: 0, green: 0, blue: 0)
                                 },
                                 onAllWhite: {
-                                    selectedPattern = nil
+                                    selectedPattern = "SOLID"
                                     selectedColor = .white
+                                    bluetoothManager.setPattern("SOLID")
                                     bluetoothManager.setColor(red: 255, green: 255, blue: 255)
                                 }
                             )
@@ -48,7 +66,11 @@ struct ContentView: View {
                                 selectedColor: selectedColor,
                                 onColorSelect: { color in
                                     selectedColor = color
-                                    selectedPattern = nil
+                                    // If no pattern is active, default to SOLID
+                                    if selectedPattern == nil {
+                                        selectedPattern = "SOLID"
+                                        bluetoothManager.setPattern("SOLID")
+                                    }
                                     let rgb = color.rgbComponents
                                     bluetoothManager.setColor(
                                         red: Int(rgb.red * 255),
@@ -58,13 +80,29 @@ struct ContentView: View {
                                 }
                             )
 
-                            // Pattern Controls
-                            PatternCard(
+                            // Patterns (color-agnostic)
+                            PatternsCard(
                                 selectedPattern: selectedPattern,
-                                selectedColor: selectedColor,
                                 onPatternSelect: { pattern in
                                     selectedPattern = pattern
                                     bluetoothManager.setPattern(pattern)
+                                }
+                            )
+                            
+                            // Effects (color-changing)
+                            EffectsCard(
+                                selectedPattern: selectedPattern,
+                                onPatternSelect: { pattern in
+                                    selectedPattern = pattern
+                                    bluetoothManager.setPattern(pattern)
+                                }
+                            )
+                            
+                            // Pattern Speed Control
+                            PatternSpeedCard(
+                                speed: $patternSpeed,
+                                onSpeedChange: { speed in
+                                    bluetoothManager.setSpeed(speed.multiplier)
                                 }
                             )
 
@@ -81,7 +119,11 @@ struct ContentView: View {
                                 selectedColor: $selectedColor,
                                 onColorChange: { color in
                                     selectedColor = color
-                                    selectedPattern = nil
+                                    // If no pattern is active, default to SOLID
+                                    if selectedPattern == nil {
+                                        selectedPattern = "SOLID"
+                                        bluetoothManager.setPattern("SOLID")
+                                    }
                                     let rgb = color.rgbComponents
                                     bluetoothManager.setColor(
                                         red: Int(rgb.red * 255),
@@ -96,6 +138,9 @@ struct ContentView: View {
                         }
                     }
                     .padding()
+                }
+                .refreshable {
+                    await reconnect()
                 }
             }
             .navigationTitle("Jeep LEDs")
@@ -115,6 +160,16 @@ struct ContentView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView(bluetoothManager: bluetoothManager)
             }
+        }
+    }
+    
+    // Pull-to-refresh reconnection
+    private func reconnect() async {
+        if !bluetoothManager.isConnected {
+            bluetoothManager.startScanning()
+            // Give it time to scan and potentially reconnect
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            bluetoothManager.stopScanning()
         }
     }
 }
@@ -222,14 +277,14 @@ struct PresetColorsCard: View {
     let onColorSelect: (Color) -> Void
 
     let presetColors: [(name: String, color: Color)] = [
-        ("Red", .red),
-        ("Orange", .orange),
-        ("Yellow", .yellow),
-        ("Green", .green),
-        ("Cyan", .cyan),
-        ("Blue", .blue),
-        ("Purple", .purple),
-        ("Pink", .pink)
+        ("Red", Color(red: 1.0, green: 0.0, blue: 0.0)),        // Pure red: 255,0,0
+        ("Orange", Color(red: 1.0, green: 0.5, blue: 0.0)),     // Pure orange: 255,127,0
+        ("Yellow", Color(red: 1.0, green: 1.0, blue: 0.0)),     // Pure yellow: 255,255,0
+        ("Green", Color(red: 0.0, green: 1.0, blue: 0.0)),      // Pure green: 0,255,0
+        ("Cyan", Color(red: 0.0, green: 1.0, blue: 1.0)),       // Pure cyan: 0,255,255
+        ("Blue", Color(red: 0.0, green: 0.0, blue: 1.0)),       // Pure blue: 0,0,255
+        ("Purple", Color(red: 0.5, green: 0.0, blue: 1.0)),     // Pure purple: 127,0,255
+        ("Pink", Color(red: 1.0, green: 0.0, blue: 0.5))        // Pure pink: 255,0,127
     ]
 
     var body: some View {
@@ -305,10 +360,9 @@ struct ColorButton: View {
     }
 }
 
-// MARK: - Pattern Card
-struct PatternCard: View {
+// MARK: - Patterns Card (color-agnostic)
+struct PatternsCard: View {
     let selectedPattern: String?
-    let selectedColor: Color
     let onPatternSelect: (String) -> Void
 
     let patterns = [
@@ -316,10 +370,7 @@ struct PatternCard: View {
         (name: "Blink", code: "BLINK", icon: "bolt.fill"),
         (name: "Breathe", code: "BREATHE", icon: "waveform.path.ecg"),
         (name: "Strobe", code: "STROBE", icon: "flashlight.on.fill"),
-        (name: "Police", code: "POLICE", icon: "light.beacon.max.fill"),
-        (name: "Hazard", code: "HAZARD", icon: "exclamationmark.triangle.fill"),
         (name: "Alternate", code: "ALTERNATE", icon: "arrow.left.arrow.right"),
-        (name: "Rainbow", code: "RAINBOW", icon: "rainbow"),
         (name: "Chase", code: "CHASE", icon: "arrow.right.circle.fill"),
         (name: "Sparkle", code: "SPARKLE", icon: "sparkles"),
         (name: "Fade In/Out", code: "FADE", icon: "circle.lefthalf.filled"),
@@ -330,8 +381,8 @@ struct PatternCard: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "wand.and.stars")
-                    .foregroundStyle(selectedColor.visibleAccent)
-                Text("Effects")
+                    .foregroundStyle(.purple)
+                Text("Patterns")
                     .font(.title3)
                     .fontWeight(.semibold)
             }
@@ -342,7 +393,7 @@ struct PatternCard: View {
                         name: pattern.name,
                         icon: pattern.icon,
                         isSelected: selectedPattern == pattern.code,
-                        accentColor: selectedColor.visibleAccent,
+                        accentColor: .purple,
                         action: { onPatternSelect(pattern.code) }
                     )
                 }
@@ -352,6 +403,114 @@ struct PatternCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
+    }
+}
+
+// MARK: - Effects Card (color-changing)
+struct EffectsCard: View {
+    let selectedPattern: String?
+    let onPatternSelect: (String) -> Void
+
+    let effects = [
+        (name: "Rainbow", code: "RAINBOW", icon: "rainbow"),
+        (name: "Police", code: "POLICE", icon: "light.beacon.max.fill"),
+        (name: "Hazard", code: "HAZARD", icon: "exclamationmark.triangle.fill")
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(.pink)
+                Text("Effects")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
+                ForEach(effects, id: \.code) { effect in
+                    PatternButton(
+                        name: effect.name,
+                        icon: effect.icon,
+                        isSelected: selectedPattern == effect.code,
+                        accentColor: .pink,
+                        action: { onPatternSelect(effect.code) }
+                    )
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
+    }
+}
+
+// MARK: - Pattern Speed Card
+struct PatternSpeedCard: View {
+    @Binding var speed: ContentView.PatternSpeed
+    let onSpeedChange: (ContentView.PatternSpeed) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "gauge.with.dots.needle.67percent")
+                    .foregroundStyle(.cyan)
+                Text("Pattern Speed")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+            }
+            
+            HStack(spacing: 12) {
+                ForEach(ContentView.PatternSpeed.allCases, id: \.self) { speedOption in
+                    SpeedButton(
+                        level: speedOption.rawValue,
+                        icon: iconForSpeed(speedOption),
+                        isSelected: speed == speedOption,
+                        action: {
+                            speed = speedOption
+                            onSpeedChange(speedOption)
+                        }
+                    )
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
+    }
+    
+    private func iconForSpeed(_ speed: ContentView.PatternSpeed) -> String {
+        switch speed {
+        case .slow: return "tortoise.fill"
+        case .medium: return "hare.fill"
+        case .fast: return "bolt.fill"
+        }
+    }
+}
+
+struct SpeedButton: View {
+    let level: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.title2)
+                Text(level)
+                    .font(.caption)
+                    .fontWeight(.medium)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(isSelected ? Color.cyan : Color.cyan.opacity(0.1))
+            .foregroundColor(isSelected ? .white : .cyan)
+            .cornerRadius(10)
+        }
     }
 }
 
@@ -628,16 +787,7 @@ extension Color {
         #endif
     }
     
-    var isCloseToWhite: Bool {
-        let rgb = rgbComponents
-        // Consider it white if all RGB values are above 0.9 (230/255)
-        return rgb.red > 0.9 && rgb.green > 0.9 && rgb.blue > 0.9
-    }
-    
-    // Returns black if color is close to white, otherwise returns the color itself
-    var visibleAccent: Color {
-        isCloseToWhite ? .black : self
-    }
+
 }
 
 #Preview {

@@ -105,6 +105,12 @@ class BluetoothManager: NSObject, ObservableObject {
 
     // Send command to Arduino with queuing for reliability
     func sendCommand(_ command: String) {
+        // Remove duplicate commands at the end of the queue to improve responsiveness
+        if let lastCommand = commandQueue.last, lastCommand == command {
+            print("⏭️ Skipping duplicate command: '\(command)'")
+            return
+        }
+        
         commandQueue.append(command)
         processCommandQueue()
     }
@@ -127,23 +133,34 @@ class BluetoothManager: NSObject, ObservableObject {
         }
 
         print("📤 Sending command: '\(command)' (\(data.count) bytes)")
+        print("   Hex: \(data.map { String(format: "%02X", $0) }.joined(separator: " "))")
+        print("   ASCII: \(data.map { char in String(format: "'%c'(%02X)", char, char) }.joined(separator: " "))")
 
-        // Send one byte at a time with delays for SoftwareSerial reliability
+        // Send one byte at a time with optimized delays for SoftwareSerial reliability
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let startTime = Date()
+            
             for (index, byte) in data.enumerated() {
                 let singleByte = Data([byte])
                 peripheral.writeValue(singleByte, for: characteristic, type: .withoutResponse)
+                
+                let char = String(format: "%c", byte)
+                let hex = String(format: "%02X", byte)
+                print("   [\(index)] Sent: '\(char)' (0x\(hex))")
 
-                // Extra delay after command character to prevent corruption
+                // Optimized delays - command char needs more time
                 if index == 0 {
-                    Thread.sleep(forTimeInterval: 0.05) // 50ms after command char
+                    Thread.sleep(forTimeInterval: 0.03) // 30ms after command char
                 } else {
-                    Thread.sleep(forTimeInterval: 0.02) // 20ms between data bytes
+                    Thread.sleep(forTimeInterval: 0.01) // 10ms between data bytes
                 }
             }
 
-            // Wait a bit before sending next command
-            Thread.sleep(forTimeInterval: 0.1)
+            // Short wait before sending next command
+            Thread.sleep(forTimeInterval: 0.03)
+            
+            let elapsed = Date().timeIntervalSince(startTime)
+            print("✅ Command sent in \(Int(elapsed * 1000))ms")
 
             DispatchQueue.main.async {
                 self?.isProcessingCommand = false
@@ -171,6 +188,15 @@ class BluetoothManager: NSObject, ObservableObject {
         let command = "B\(brightness)\n"
         sendCommand(command)
         print("🔆 Brightness command queued: \(brightness)")
+    }
+    
+    // Send speed command (multiplier: 0.5 = fast, 1.0 = medium, 2.0 = slow)
+    func setSpeed(_ multiplier: Double) {
+        // Convert multiplier to percentage (50 = fast, 100 = medium, 200 = slow)
+        let speedPercent = Int(multiplier * 100)
+        let command = "S\(speedPercent)\n"
+        sendCommand(command)
+        print("⚡ Speed command queued: \(speedPercent)% (multiplier: \(multiplier))")
     }
 }
 

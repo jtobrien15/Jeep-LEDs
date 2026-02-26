@@ -1,0 +1,140 @@
+/*
+ * LED Type Configuration Tester
+ *
+ * This sketch cycles through all possible RGBW LED configurations
+ * to help you find the correct one for your strip.
+ *
+ * HOW TO USE:
+ * 1. Upload this sketch to your Arduino
+ * 2. Open Serial Monitor (9600 baud)
+ * 3. Watch your LEDs - they will cycle through RED, GREEN, BLUE, WHITE
+ * 4. The Serial Monitor will tell you which configuration is being tested
+ * 5. When you see accurate colors, note which configuration it is
+ * 6. Update your main ArduinoCode.txt with that configuration
+ *
+ * The test cycles every 8 seconds (2 seconds per color)
+ */
+
+#include <Adafruit_NeoPixel.h>
+
+#define LED_PIN    6
+#define NUM_LEDS   8
+
+// We'll recreate the strip object with different configs
+Adafruit_NeoPixel *strip = NULL;
+
+// All possible RGBW configurations to test
+const uint16_t configs[] = {
+  NEO_RGBW + NEO_KHZ800,  // 0: Red, Green, Blue, White
+  NEO_GRBW + NEO_KHZ800,  // 1: Green, Red, Blue, White
+  NEO_BRGW + NEO_KHZ800,  // 2: Blue, Red, Green, White
+  NEO_RBGW + NEO_KHZ800,  // 3: Red, Blue, Green, White
+  NEO_GBWR + NEO_KHZ800,  // 4: Green, Blue, White, Red
+  NEO_WRGB + NEO_KHZ800,  // 5: White, Red, Green, Blue
+};
+
+const char* configNames[] = {
+  "NEO_RGBW (Red, Green, Blue, White)",
+  "NEO_GRBW (Green, Red, Blue, White)",
+  "NEO_BRGW (Blue, Red, Green, White)",
+  "NEO_RBGW (Red, Blue, Green, White)",
+  "NEO_GBWR (Green, Blue, White, Red)",
+  "NEO_WRGB (White, Red, Green, Blue)"
+};
+
+int currentConfig = 0;
+int currentColor = 0;
+unsigned long lastChange = 0;
+
+void setup() {
+  Serial.begin(9600);
+  delay(2000);
+
+  Serial.println("========================================");
+  Serial.println("LED Type Configuration Tester");
+  Serial.println("========================================");
+  Serial.println("This will cycle through all RGBW configs");
+  Serial.println("Watch your LEDs and note which config");
+  Serial.println("gives you accurate colors!");
+  Serial.println("========================================\n");
+
+  // Start with first config
+  initStrip(currentConfig);
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+
+  // Change color every 2 seconds
+  if (currentMillis - lastChange >= 2000) {
+    lastChange = currentMillis;
+    currentColor++;
+
+    // After showing all 4 colors, move to next config
+    if (currentColor > 3) {
+      currentColor = 0;
+      currentConfig++;
+
+      // Restart from beginning after all configs tested
+      if (currentConfig >= 6) {
+        currentConfig = 0;
+        Serial.println("\n========================================");
+        Serial.println("CYCLING BACK TO FIRST CONFIG");
+        Serial.println("========================================\n");
+      }
+
+      initStrip(currentConfig);
+    }
+
+    showTestColor();
+  }
+}
+
+void initStrip(int configIndex) {
+  // Delete old strip if it exists
+  if (strip != NULL) {
+    delete strip;
+  }
+
+  // Create new strip with this config
+  strip = new Adafruit_NeoPixel(NUM_LEDS, LED_PIN, configs[configIndex]);
+  strip->begin();
+  strip->setBrightness(255);
+  strip->show();
+
+  Serial.println("\n========================================");
+  Serial.print("CONFIG #");
+  Serial.print(configIndex);
+  Serial.print(": ");
+  Serial.println(configNames[configIndex]);
+  Serial.println("========================================");
+}
+
+void showTestColor() {
+  switch(currentColor) {
+    case 0:
+      Serial.println("  Testing: RED (255, 0, 0)");
+      setAllPixels(255, 0, 0, 0);
+      break;
+    case 1:
+      Serial.println("  Testing: GREEN (0, 255, 0)");
+      setAllPixels(0, 255, 0, 0);
+      break;
+    case 2:
+      Serial.println("  Testing: BLUE (0, 0, 255)");
+      setAllPixels(0, 0, 255, 0);
+      break;
+    case 3:
+      Serial.println("  Testing: WHITE (255, 255, 255)");
+      setAllPixels(255, 255, 255, 0);
+      Serial.println();
+      break;
+  }
+}
+
+void setAllPixels(uint8_t r, uint8_t g, uint8_t b, uint8_t w) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    strip->setPixelColor(i, strip->Color(r, g, b, w));
+  }
+  strip->show();
+}
