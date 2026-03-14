@@ -121,11 +121,8 @@ struct ContentView: View {
                                 onColorSelect: { color in
                                     HapticManager.shared.selection()
                                     selectedColor = color
-                                    
-                                    // Always set pattern to SOLID for color selection
-                                    selectedPattern = "SOLID"
-                                    
-                                    // Send ONLY the color command - Arduino will use SOLID pattern by default
+
+                                    // Send color command - keeps current pattern active
                                     let rgb = color.rgbComponents
                                     bluetoothManager.setColor(
                                         red: Int(rgb.red * 255),
