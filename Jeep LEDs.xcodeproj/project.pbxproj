@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		982891E12F4B8B0600E8F5A9 /* ArduinoCode.txt in Resources */ = {isa = PBXBuildFile; fileRef = 982891E02F4B8B0600E8F5A9 /* ArduinoCode.txt */; };
 		982891E92F4BCFA700E8F5A9 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 982891E82F4BCFA700E8F5A9 /* AppIcon.icon */; };
 		98C6BD4F2F4FF23E007D09E2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 98C6BD4E2F4FF23E007D09E2 /* WidgetKit.framework */; };
 		98C6BD512F4FF23E007D09E2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 98C6BD502F4FF23E007D09E2 /* SwiftUI.framework */; };
@@ -60,7 +59,6 @@
 
 /* Begin PBXFileReference section */
 		982891CE2F4B89F300E8F5A9 /* Jeep LEDs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Jeep LEDs.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		982891E02F4B8B0600E8F5A9 /* ArduinoCode.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ArduinoCode.txt; sourceTree = "<group>"; };
 		982891E82F4BCFA700E8F5A9 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		98C6BD4C2F4FF23E007D09E2 /* Jeep LED WidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Jeep LED WidgetExtension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		98C6BD4E2F4FF23E007D09E2 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -184,7 +182,6 @@
 				98C6BD7B2F4FF2C1007D09E2 /* Jeep LEDs IntentsUI */,
 				98C6BD4D2F4FF23E007D09E2 /* Frameworks */,
 				982891CF2F4B89F300E8F5A9 /* Products */,
-				982891E02F4B8B0600E8F5A9 /* ArduinoCode.txt */,
 				982891E82F4BCFA700E8F5A9 /* AppIcon.icon */,
 			);
 			sourceTree = "<group>";
@@ -357,7 +354,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				982891E12F4B8B0600E8F5A9 /* ArduinoCode.txt in Resources */,
 				982891E92F4BCFA700E8F5A9 /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -566,7 +562,6 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Jeep-LEDs-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = LightControl;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app needs ​Bluetooth access to connect to and control your ​Jeep​'s ​Neopixel ​LEDs via the ​Adafruit ​Bluefruit module.";
@@ -616,7 +611,6 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Jeep-LEDs-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = LightControl;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app needs ​Bluetooth access to connect to and control your ​Jeep​'s ​Neopixel ​LEDs via the ​Adafruit ​Bluefruit module.";
