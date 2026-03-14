@@ -8,8 +8,29 @@
 import SwiftUI
 import CoreBluetooth
 
+// MARK: - Haptic Feedback Helper
+class HapticManager {
+    static let shared = HapticManager()
+    
+    func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.impactOccurred()
+    }
+    
+    func notification(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(type)
+    }
+    
+    func selection() {
+        let generator = UISelectionFeedbackGenerator()
+        generator.selectionChanged()
+    }
+}
+
 struct ContentView: View {
     @StateObject private var bluetoothManager = BluetoothManager()
+    @EnvironmentObject var deepLinkHandler: DeepLinkHandler
     @State private var selectedColor = Color.red
     @State private var brightness: Double = 255
     @State private var showingDeviceList = false
@@ -17,6 +38,11 @@ struct ContentView: View {
     @State private var selectedPattern: String? = nil
     @State private var isRefreshing = false
     @State private var patternSpeed: PatternSpeed = .medium
+    @State private var autoOffTimer: AutoOffTimer = .off
+    @State private var timerEndDate: Date?
+    @State private var timeRemaining: TimeInterval = 0
+    @State private var showingTimerAlert = false
+    @State private var commandCheckTimer: Timer?
     
     enum PatternSpeed: String, CaseIterable {
         case slow = "Slow"
@@ -28,6 +54,32 @@ struct ContentView: View {
             case .slow: return 2.0      // 2x slower (longer delays)
             case .medium: return 1.0    // Normal speed
             case .fast: return 0.5      // 2x faster (shorter delays)
+            }
+        }
+    }
+    
+    enum AutoOffTimer: String, CaseIterable {
+        case off = "Off"
+        case fifteenMin = "15 min"
+        case thirtyMin = "30 min"
+        case oneHour = "1 hour"
+        case twoHours = "2 hours"
+        
+        var duration: TimeInterval {
+            switch self {
+            case .off: return 0
+            case .fifteenMin: return 15 * 60
+            case .thirtyMin: return 30 * 60
+            case .oneHour: return 60 * 60
+            case .twoHours: return 120 * 60
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .off: return "timer.slash"
+            case .fifteenMin, .thirtyMin: return "timer"
+            case .oneHour, .twoHours: return "clock"
             }
         }
     }
@@ -49,11 +101,13 @@ struct ContentView: View {
                             // Quick Actions Row
                             QuickActionsRow(
                                 onAllOff: {
+                                    HapticManager.shared.impact(.medium)
                                     selectedPattern = nil
                                     selectedColor = .black // Black represents "off" state
                                     bluetoothManager.setColor(red: 0, green: 0, blue: 0)
                                 },
                                 onAllWhite: {
+                                    HapticManager.shared.impact(.medium)
                                     selectedPattern = "SOLID"
                                     selectedColor = .white
                                     bluetoothManager.setPattern("SOLID")
@@ -65,12 +119,13 @@ struct ContentView: View {
                             PresetColorsCard(
                                 selectedColor: selectedColor,
                                 onColorSelect: { color in
+                                    HapticManager.shared.selection()
                                     selectedColor = color
-                                    // If no pattern is active, default to SOLID
-                                    if selectedPattern == nil {
-                                        selectedPattern = "SOLID"
-                                        bluetoothManager.setPattern("SOLID")
-                                    }
+                                    
+                                    // Always set pattern to SOLID for color selection
+                                    selectedPattern = "SOLID"
+                                    
+                                    // Send ONLY the color command - Arduino will use SOLID pattern by default
                                     let rgb = color.rgbComponents
                                     bluetoothManager.setColor(
                                         red: Int(rgb.red * 255),
@@ -84,6 +139,7 @@ struct ContentView: View {
                             PatternsCard(
                                 selectedPattern: selectedPattern,
                                 onPatternSelect: { pattern in
+                                    HapticManager.shared.impact(.light)
                                     selectedPattern = pattern
                                     bluetoothManager.setPattern(pattern)
                                 }
@@ -93,6 +149,7 @@ struct ContentView: View {
                             EffectsCard(
                                 selectedPattern: selectedPattern,
                                 onPatternSelect: { pattern in
+                                    HapticManager.shared.impact(.medium)
                                     selectedPattern = pattern
                                     bluetoothManager.setPattern(pattern)
                                 }
@@ -102,6 +159,7 @@ struct ContentView: View {
                             PatternSpeedCard(
                                 speed: $patternSpeed,
                                 onSpeedChange: { speed in
+                                    HapticManager.shared.selection()
                                     bluetoothManager.setSpeed(speed.multiplier)
                                 }
                             )
@@ -111,6 +169,16 @@ struct ContentView: View {
                                 brightness: $brightness,
                                 onBrightnessChange: { value in
                                     bluetoothManager.setBrightness(Int(value))
+                                }
+                            )
+                            
+                            // Auto-Off Timer
+                            AutoOffTimerCard(
+                                selectedTimer: $autoOffTimer,
+                                timeRemaining: timeRemaining,
+                                onTimerChange: { timer in
+                                    HapticManager.shared.impact(.light)
+                                    startTimer(timer)
                                 }
                             )
 
@@ -160,6 +228,66 @@ struct ContentView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView(bluetoothManager: bluetoothManager)
             }
+            .alert("Auto-Off Timer", isPresented: $showingTimerAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                if timeRemaining <= 60 && timeRemaining > 0 {
+                    Text("LEDs will turn off in 1 minute")
+                } else if timeRemaining <= 0 {
+                    Text("Auto-off timer expired. LEDs have been turned off.")
+                }
+            }
+            .onChange(of: deepLinkHandler.activeLink) { _, newLink in
+                if let link = newLink {
+                    deepLinkHandler.process(link, viewModel: self)
+                }
+            }
+            .onChange(of: selectedColor) { _, _ in
+                updateSharedState()
+            }
+            .onChange(of: selectedPattern) { _, _ in
+                updateSharedState()
+            }
+            .onChange(of: bluetoothManager.isConnected) { _, isConnected in
+                updateSharedState()
+                if isConnected {
+                    // Success haptic for connection
+                    HapticManager.shared.notification(.success)
+                    // Process any pending widget commands when connection is established
+                    processPendingCommands()
+                } else {
+                    // Warning haptic for disconnection
+                    HapticManager.shared.notification(.warning)
+                }
+            }
+            .onAppear {
+                updateSharedState()
+                // Process any pending widget commands
+                processPendingCommands()
+                
+                // Start periodic check for widget commands (every 1 second for faster response)
+                commandCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                    processPendingCommands()
+                }
+                
+                // Also check when app becomes active from background
+                NotificationCenter.default.addObserver(
+                    forName: UIApplication.willEnterForegroundNotification,
+                    object: nil,
+                    queue: .main
+                ) { _ in
+                    print("🔄 App entering foreground - checking for widget commands")
+                    processPendingCommands()
+                }
+            }
+            .onDisappear {
+                // Stop the command check timer when view disappears
+                commandCheckTimer?.invalidate()
+                commandCheckTimer = nil
+                
+                // Remove notification observers
+                NotificationCenter.default.removeObserver(self)
+            }
         }
     }
     
@@ -170,6 +298,221 @@ struct ContentView: View {
             // Give it time to scan and potentially reconnect
             try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
             bluetoothManager.stopScanning()
+        }
+    }
+    
+    // MARK: - Auto-Off Timer Functions
+    
+    private func startTimer(_ timer: AutoOffTimer) {
+        if timer == .off {
+            // Cancel timer
+            timerEndDate = nil
+            timeRemaining = 0
+            return
+        }
+        
+        // Start new timer
+        timerEndDate = Date().addingTimeInterval(timer.duration)
+        timeRemaining = timer.duration
+        
+        // Start countdown
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { t in
+            guard let endDate = timerEndDate else {
+                t.invalidate()
+                return
+            }
+            
+            let remaining = endDate.timeIntervalSinceNow
+            
+            if remaining <= 0 {
+                // Timer expired
+                t.invalidate()
+                handleTimerExpired()
+            } else {
+                timeRemaining = remaining
+                
+                // Show warning at 1 minute remaining
+                if remaining <= 60 && remaining > 59 && !showingTimerAlert {
+                    showTimerWarning()
+                }
+            }
+        }
+    }
+    
+    private func handleTimerExpired() {
+        // Strong haptic for timer expiration
+        HapticManager.shared.notification(.warning)
+        
+        // Turn off LEDs
+        selectedPattern = nil
+        selectedColor = .black
+        bluetoothManager.setColor(red: 0, green: 0, blue: 0)
+        
+        // Reset timer
+        autoOffTimer = .off
+        timerEndDate = nil
+        timeRemaining = 0
+        
+        // Show notification
+        showTimerExpiredNotification()
+    }
+    
+    private func showTimerWarning() {
+        // Gentle haptic for 1-minute warning
+        HapticManager.shared.notification(.warning)
+        
+        showingTimerAlert = true
+        
+        // Auto-dismiss alert after showing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            showingTimerAlert = false
+        }
+    }
+    
+    private func showTimerExpiredNotification() {
+        // This will be shown via the alert modifier
+        // For now, we'll just use a simple approach
+    }
+    
+    // MARK: - Deep Link Actions
+    
+    func turnOff() {
+        selectedPattern = nil
+        selectedColor = .black
+        bluetoothManager.setColor(red: 0, green: 0, blue: 0)
+        updateSharedState()
+    }
+
+    func setColor(name: String) {
+        let colorMap: [String: Color] = [
+            "red": Color(red: 1.0, green: 0.0, blue: 0.0),
+            "orange": Color(red: 1.0, green: 0.5, blue: 0.0),
+            "yellow": Color(red: 1.0, green: 1.0, blue: 0.0),
+            "green": Color(red: 0.0, green: 1.0, blue: 0.0),
+            "cyan": Color(red: 0.0, green: 1.0, blue: 1.0),
+            "blue": Color(red: 0.0, green: 0.0, blue: 1.0),
+            "purple": Color(red: 0.5, green: 0.0, blue: 1.0),
+            "pink": Color(red: 1.0, green: 0.0, blue: 0.5),
+            "white": .white
+        ]
+
+        guard let color = colorMap[name.lowercased()] else { return }
+
+        selectedColor = color
+        if selectedPattern == nil {
+            selectedPattern = "SOLID"
+            bluetoothManager.setPattern("SOLID")
+        }
+
+        let rgb = color.rgbComponents
+        bluetoothManager.setColor(
+            red: Int(rgb.red * 255),
+            green: Int(rgb.green * 255),
+            blue: Int(rgb.blue * 255)
+        )
+        updateSharedState()
+    }
+
+    func setPattern(name: String) {
+        selectedPattern = name.uppercased()
+        bluetoothManager.setPattern(name.uppercased())
+        updateSharedState()
+    }
+
+    func setEmergency() {
+        selectedPattern = "HAZARD"
+        bluetoothManager.setPattern("HAZARD")
+        updateSharedState()
+    }
+
+    func updateSharedState() {
+        let rgb = selectedColor.rgbComponents
+        let state = LEDState(
+            isOn: selectedColor != .black,
+            colorName: getColorName(selectedColor),
+            colorRed: rgb.red,
+            colorGreen: rgb.green,
+            colorBlue: rgb.blue,
+            pattern: selectedPattern ?? "SOLID",
+            brightness: Int(brightness),
+            speed: patternSpeed.rawValue,
+            isConnected: bluetoothManager.isConnected,
+            lastUpdated: Date()
+        )
+        SharedLEDStateManager.shared.saveState(state)
+    }
+    
+    // Check for pending commands from widgets/Siri
+    func processPendingCommands() {
+        print("🔍 Checking for pending commands... (BT connected: \(bluetoothManager.isConnected))")
+        
+        guard bluetoothManager.isConnected else {
+            print("⚠️ Cannot process pending commands - not connected to Bluetooth")
+            return
+        }
+        
+        if let command = SharedLEDStateManager.shared.getPendingCommand() {
+            print("🎯 Processing widget command: \(command)")
+            
+            if command == "OFF" {
+                print("   Executing: Turn off LEDs")
+                turnOff()
+            } else if command.hasPrefix("COLOR:") {
+                let components = command.replacingOccurrences(of: "COLOR:", with: "").split(separator: ",")
+                if components.count == 3,
+                   let r = Int(components[0]),
+                   let g = Int(components[1]),
+                   let b = Int(components[2]) {
+                    print("   Executing: Set color to RGB(\(r),\(g),\(b))")
+                    
+                    // Update UI
+                    selectedColor = Color(red: Double(r)/255.0, green: Double(g)/255.0, blue: Double(b)/255.0)
+                    selectedPattern = "SOLID"
+                    
+                    // Send Bluetooth commands
+                    bluetoothManager.setPattern("SOLID")
+                    bluetoothManager.setColor(red: r, green: g, blue: b)
+                }
+            } else if command.hasPrefix("PATTERN:") {
+                let pattern = command.replacingOccurrences(of: "PATTERN:", with: "")
+                print("   Executing: Set pattern to \(pattern)")
+                
+                // Update UI
+                selectedPattern = pattern
+                
+                // Send Bluetooth command
+                bluetoothManager.setPattern(pattern)
+            }
+        } else {
+            print("ℹ️ No pending commands to process")
+        }
+    }
+
+    private func getColorName(_ color: Color) -> String {
+        let rgb = color.rgbComponents
+
+        if rgb.red == 0 && rgb.green == 0 && rgb.blue == 0 {
+            return "Off"
+        } else if rgb.red > 0.9 && rgb.green < 0.1 && rgb.blue < 0.1 {
+            return "Red"
+        } else if rgb.red < 0.1 && rgb.green < 0.1 && rgb.blue > 0.9 {
+            return "Blue"
+        } else if rgb.red < 0.1 && rgb.green > 0.9 && rgb.blue < 0.1 {
+            return "Green"
+        } else if rgb.red > 0.9 && rgb.green > 0.4 && rgb.blue < 0.1 {
+            return "Orange"
+        } else if rgb.red > 0.9 && rgb.green > 0.9 && rgb.blue < 0.1 {
+            return "Yellow"
+        } else if rgb.red < 0.1 && rgb.green > 0.9 && rgb.blue > 0.9 {
+            return "Cyan"
+        } else if rgb.red > 0.4 && rgb.green < 0.1 && rgb.blue > 0.9 {
+            return "Purple"
+        } else if rgb.red > 0.9 && rgb.green < 0.1 && rgb.blue > 0.4 {
+            return "Pink"
+        } else if rgb.red > 0.9 && rgb.green > 0.9 && rgb.blue > 0.9 {
+            return "White"
+        } else {
+            return "Custom"
         }
     }
 }
@@ -625,6 +968,120 @@ struct BrightnessButton: View {
     }
 }
 
+// MARK: - Auto-Off Timer Card
+struct AutoOffTimerCard: View {
+    @Binding var selectedTimer: ContentView.AutoOffTimer
+    let timeRemaining: TimeInterval
+    let onTimerChange: (ContentView.AutoOffTimer) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "timer")
+                    .foregroundStyle(.red)
+                Text("Auto-Off Timer")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                
+                Spacer()
+                
+                // Show remaining time if timer is active
+                if selectedTimer != .off && timeRemaining > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.fill")
+                            .font(.caption)
+                        Text(formatTimeRemaining(timeRemaining))
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .monospacedDigit()
+                    }
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(8)
+                }
+            }
+            
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 90))], spacing: 12) {
+                ForEach(ContentView.AutoOffTimer.allCases, id: \.self) { timer in
+                    TimerButton(
+                        label: timer.rawValue,
+                        icon: timer.icon,
+                        isSelected: selectedTimer == timer,
+                        isActive: selectedTimer == timer && timeRemaining > 0,
+                        action: {
+                            selectedTimer = timer
+                            onTimerChange(timer)
+                        }
+                    )
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
+    }
+    
+    private func formatTimeRemaining(_ seconds: TimeInterval) -> String {
+        let hours = Int(seconds) / 3600
+        let minutes = (Int(seconds) % 3600) / 60
+        let secs = Int(seconds) % 60
+        
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        } else {
+            return String(format: "%d:%02d", minutes, secs)
+        }
+    }
+}
+
+struct TimerButton: View {
+    let label: String
+    let icon: String
+    let isSelected: Bool
+    let isActive: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.title3)
+                Text(label)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(backgroundColor)
+            .foregroundColor(foregroundColor)
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(isActive ? Color.red : Color.clear, lineWidth: 2)
+            )
+        }
+    }
+    
+    private var backgroundColor: Color {
+        if isActive {
+            return Color.red
+        } else if isSelected {
+            return Color.red.opacity(0.2)
+        } else {
+            return Color.red.opacity(0.1)
+        }
+    }
+    
+    private var foregroundColor: Color {
+        isActive ? .white : .red
+    }
+}
+
 // MARK: - Custom Color Card
 struct CustomColorCard: View {
     @Binding var selectedColor: Color
@@ -714,6 +1171,7 @@ struct DeviceListSheet: View {
                 } else {
                     ForEach(bluetoothManager.discoveredDevices, id: \.identifier) { device in
                         Button(action: {
+                            HapticManager.shared.impact(.medium)
                             bluetoothManager.connect(to: device)
                             dismiss()
                         }) {

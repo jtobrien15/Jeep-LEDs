@@ -4,10 +4,48 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>Jeep LEDs.xcscheme_^#shared#^_</key>
+		<key>Jeep LED WidgetExtension.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+		<key>Jeep LEDs Intents.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
+		<key>Jeep LEDs IntentsUI.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
+		<key>Jeep LEDs.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>3</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>982891CD2F4B89F300E8F5A9</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>98C6BD4B2F4FF23E007D09E2</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>98C6BD6C2F4FF2C1007D09E2</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>98C6BD772F4FF2C1007D09E2</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

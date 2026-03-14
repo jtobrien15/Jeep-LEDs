@@ -1,0 +1,68 @@
+/*
+ * SIMPLE LED TEST - No Bluetooth
+ *
+ * This code ignores Bluetooth completely and just cycles through colors
+ * to verify your LED strip is working.
+ *
+ * Upload this, and the LEDs should automatically cycle:
+ * Red -> Green -> Blue -> White -> Off -> repeat every 2 seconds
+ */
+
+#include <Adafruit_NeoPixel.h>
+
+#define LED_PIN    6
+#define NUM_LEDS   60
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("LED Test Starting...");
+
+  strip.begin();
+  strip.setBrightness(255);
+  strip.show();
+
+  Serial.println("LEDs initialized");
+}
+
+void loop() {
+  // Red
+  Serial.println("Setting RED");
+  setAll(255, 0, 0);
+  delay(2000);
+
+  // Green
+  Serial.println("Setting GREEN");
+  setAll(0, 255, 0);
+  delay(2000);
+
+  // Blue
+  Serial.println("Setting BLUE");
+  setAll(0, 0, 255);
+  delay(2000);
+
+  // White
+  Serial.println("Setting WHITE");
+  setAll(255, 255, 255);
+  delay(2000);
+
+  // Off
+  Serial.println("Setting OFF");
+  setAll(0, 0, 0);
+  delay(2000);
+}
+
+void setAll(uint8_t r, uint8_t g, uint8_t b) {
+  for(int i = 0; i < NUM_LEDS; i++) {
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+  strip.show();
+  Serial.print("LEDs set to RGB(");
+  Serial.print(r);
+  Serial.print(",");
+  Serial.print(g);
+  Serial.print(",");
+  Serial.print(b);
+  Serial.println(")");
+}

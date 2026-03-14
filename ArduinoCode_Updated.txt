@@ -1,27 +1,31 @@
 /*
- * Jeep LEDs Controller - Arduino Sketch
- * 
- * This Arduino sketch controls Neopixel LEDs via Bluetooth using an Adafruit Bluefruit module.
- * Compatible with Arduino Uno R2 and Adafruit Neopixel strips.
- * 
+ * Jeep LEDs Controller - Arduino Sketch (UPDATED - RELIABLE VERSION)
+ *
+ * CHANGES FROM PREVIOUS VERSION:
+ * - Removed blocking 300ms delay
+ * - Character-by-character parsing with proper buffering
+ * - Better handling of rapid commands
+ * - More reliable command processing
+ *
  * Hardware Requirements:
  * - Arduino Uno R2
  * - Adafruit Bluefruit LE UART Friend or similar
  * - Adafruit Neopixel LED strip
- * 
+ *
  * Wiring:
  * - Bluefruit TX -> Arduino pin 10 (BLUEFRUIT_RX)
  * - Bluefruit RX -> Arduino pin 11 (BLUEFRUIT_TX)
  * - Neopixel Data -> Arduino pin 6
  * - Neopixel Power -> External 5V power supply (share ground with Arduino)
- * 
+ *
  * Libraries needed (install via Arduino Library Manager):
  * - Adafruit NeoPixel
- * 
+ *
  * Command Protocol:
  * - C<red>,<green>,<blue>\n - Set solid color (e.g., "C255,0,0\n" for red)
  * - P<pattern>\n - Set pattern (e.g., "PRAINBOW\n")
  * - B<brightness>\n - Set brightness 0-255 (e.g., "B128\n")
+ * - S<speed>\n - Set speed percentage (e.g., "S100\n")
  */
 
 #include <Adafruit_NeoPixel.h>
@@ -29,27 +33,12 @@
 
 // Configuration
 #define LED_PIN        6        // Pin connected to Neopixel data line
-#define NUM_LEDS       60        // CORRECTED: Number of LEDs in your strip
+#define NUM_LEDS       60       // Number of LEDs in your strip
 #define BLUEFRUIT_RX   10       // Bluefruit UART RX (connect to Bluefruit TX)
 #define BLUEFRUIT_TX   11       // Bluefruit UART TX (connect to Bluefruit RX)
-
-// COLOR CALIBRATION
-// Adjust these multipliers to fix color mismatch (0.0 to 1.0)
-// If red looks pink (too much blue), reduce RED_TO_BLUE
-// If green looks teal (too much blue), reduce GREEN_TO_BLUE
-#define RED_SCALE     1.0   // Scale red brightness
-#define GREEN_SCALE   1.0   // Scale green brightness
-#define BLUE_SCALE    1.0   // Scale blue brightness
-#define RED_TO_GREEN  0.0   // How much green bleeds into red (0.0-1.0)
-#define RED_TO_BLUE   0.0   // How much blue bleeds into red (0.0-1.0)
-#define GREEN_TO_RED  0.0   // How much red bleeds into green (0.0-1.0)
-#define GREEN_TO_BLUE 0.0   // How much blue bleeds into green (0.0-1.0)
-#define BLUE_TO_RED   0.0   // How much red bleeds into blue (0.0-1.0)
-#define BLUE_TO_GREEN 0.0   // How much green bleeds into blue (0.0-1.0)
+#define CMD_BUFFER_SIZE 32      // Maximum command length
 
 // Initialize Neopixel strip
-// RGBW strips can have different channel orders: NEO_GRBW, NEO_RGBW, NEO_BRGW, etc.
-// Using NEO_GRBW based on LED type test results
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // Initialize Software Serial for Bluefruit
@@ -63,13 +52,18 @@ unsigned long lastUpdate = 0;
 int patternStep = 0;
 float speedMultiplier = 1.0;  // 1.0 = normal, 0.5 = fast, 2.0 = slow
 
+// Command buffer for non-blocking reads
+char cmdBuffer[CMD_BUFFER_SIZE];
+uint8_t cmdBufferIndex = 0;
+unsigned long lastCharTime = 0;
+
 void setup() {
   // Initialize Serial for debugging
   Serial.begin(9600);
-  delay(1000); // Wait for serial to initialize
+  delay(1000);
 
   Serial.println("===================================");
-  Serial.println("Jeep LEDs Controller Starting...");
+  Serial.println("Jeep LEDs Controller v2.0");
   Serial.println("===================================");
 
   // Initialize Bluefruit UART
@@ -79,7 +73,7 @@ void setup() {
   // Initialize Neopixel strip
   strip.begin();
   strip.setBrightness(brightness);
-  strip.show(); // Initialize all pixels to 'off'
+  strip.show();
 
   Serial.print("Neopixel strip initialized - Pin: ");
   Serial.print(LED_PIN);
@@ -88,73 +82,86 @@ void setup() {
   Serial.print(", Brightness: ");
   Serial.println(brightness);
 
-  Serial.print("Initial color - R:");
-  Serial.print(red);
-  Serial.print(" G:");
-  Serial.print(green);
-  Serial.print(" B:");
-  Serial.println(blue);
-
   Serial.println("===================================");
   Serial.println("Ready to receive commands");
-  Serial.println("Waiting for Bluetooth data...");
   Serial.println("===================================");
 }
 
 void loop() {
-  // Check for incoming Bluetooth commands
-  if (bluefruitSerial.available()) {
-    // Wait for complete message to arrive (iOS sends byte-by-byte)
-    delay(300);
-
-    String command = bluefruitSerial.readStringUntil('\n');
-    command.trim();
-
-    processCommand(command);
-  }
+  // Non-blocking command reading
+  readBluetoothCommand();
 
   // Update LED pattern
   updatePattern();
 }
 
+void readBluetoothCommand() {
+  // Read one character at a time without blocking
+  while (bluefruitSerial.available()) {
+    char c = bluefruitSerial.read();
+
+    // Record when we received this character
+    lastCharTime = millis();
+
+    // End of command
+    if (c == '\n' || c == '\r') {
+      if (cmdBufferIndex > 0) {
+        cmdBuffer[cmdBufferIndex] = '\0';  // Null terminate
+
+        // Build String object explicitly (more reliable than String(char*) constructor)
+        String cmdString = "";
+        for (int i = 0; i < cmdBufferIndex; i++) {
+          cmdString += cmdBuffer[i];
+        }
+
+        processCommand(cmdString);
+        cmdBufferIndex = 0;  // Reset buffer
+      }
+    }
+    // Add to buffer if not full
+    else if (cmdBufferIndex < CMD_BUFFER_SIZE - 1) {
+      cmdBuffer[cmdBufferIndex++] = c;
+    }
+    // Buffer overflow - reset
+    else {
+      Serial.println("ERROR: Command buffer overflow");
+      cmdBufferIndex = 0;
+    }
+  }
+
+  // Timeout - if we've been building a command for >100ms without newline, reset
+  if (cmdBufferIndex > 0 && (millis() - lastCharTime) > 100) {
+    Serial.println("WARNING: Command timeout, buffer reset");
+    cmdBufferIndex = 0;
+  }
+}
+
 void processCommand(String command) {
   if (command.length() == 0) return;
+
+  Serial.print("Received: '");
+  Serial.print(command);
+  Serial.println("'");
 
   char cmdType = command.charAt(0);
   String cmdData = command.substring(1);
 
-  // CORRUPTED BYTE DETECTION AND RECOVERY
-  // If first byte is corrupted (not C, P, B, or S), try to infer the command type
-  if (cmdType != 'C' && cmdType != 'P' && cmdType != 'B' && cmdType != 'S') {
-    // Check if the rest of the data looks like a color command (contains two commas)
-    int comma1 = cmdData.indexOf(',');
-    int comma2 = cmdData.indexOf(',', comma1 + 1);
-
-    if (comma1 > 0 && comma2 > comma1) {
-      cmdType = 'C';
-    }
-    // Check if data is all uppercase letters (likely a pattern name)
-    else if (cmdData.length() > 2 && isUpperCase(cmdData)) {
-      cmdType = 'P';
-    }
-    // Check if data is all digits (likely brightness)
-    else if (cmdData.length() > 0 && isDigits(cmdData)) {
-      cmdType = 'B';
-    }
-    else {
-      return;
-    }
-  }
-
   switch (cmdType) {
     case 'C': // Color command
       parseColor(cmdData);
-      // Don't reset pattern - let current pattern continue with new color
+      Serial.print("Color set to R:");
+      Serial.print(red);
+      Serial.print(" G:");
+      Serial.print(green);
+      Serial.print(" B:");
+      Serial.println(blue);
       break;
 
     case 'P': // Pattern command
       currentPattern = cmdData;
       patternStep = 0;
+      Serial.print("Pattern set to: ");
+      Serial.println(currentPattern);
       break;
 
     case 'B': // Brightness command
@@ -162,12 +169,22 @@ void processCommand(String command) {
       brightness = constrain(brightness, 0, 255);
       strip.setBrightness(brightness);
       strip.show();
+      Serial.print("Brightness set to: ");
+      Serial.println(brightness);
       break;
 
     case 'S': // Speed command (percentage: 50=fast, 100=normal, 200=slow)
       int speedPercent = cmdData.toInt();
       speedMultiplier = speedPercent / 100.0;
-      speedMultiplier = constrain(speedMultiplier, 0.25, 4.0); // Limit range
+      speedMultiplier = constrain(speedMultiplier, 0.25, 4.0);
+      Serial.print("Speed set to: ");
+      Serial.print(speedPercent);
+      Serial.println("%");
+      break;
+
+    default:
+      Serial.print("ERROR: Unknown command type: ");
+      Serial.println(cmdType);
       break;
   }
 }
@@ -193,6 +210,8 @@ void parseColor(String colorData) {
     red = constrain(red, 0, 255);
     green = constrain(green, 0, 255);
     blue = constrain(blue, 0, 255);
+  } else {
+    Serial.println("ERROR: Invalid color format");
   }
 }
 
@@ -204,7 +223,6 @@ void updatePattern() {
     solidColor(red, green, blue);
   }
   else if (currentPattern == "BLINK") {
-    // Blink pattern - 500ms interval (adjustable by speed)
     if (currentMillis - lastUpdate >= (500 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
@@ -216,7 +234,6 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "BREATHE") {
-    // Breathe pattern - smooth fade in/out (adjustable by speed)
     if (currentMillis - lastUpdate >= (20 * speedMultiplier)) {
       lastUpdate = currentMillis;
       float breath = (exp(sin(millis() / (2000.0 * speedMultiplier) * PI)) - 0.36787944) * 108.0;
@@ -225,7 +242,6 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "STROBE") {
-    // Strobe pattern - fast flashing (adjustable by speed)
     if (currentMillis - lastUpdate >= (100 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
@@ -237,7 +253,6 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "POLICE") {
-    // Police pattern - alternating red/blue (adjustable by speed)
     if (currentMillis - lastUpdate >= (100 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
@@ -245,19 +260,17 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "HAZARD") {
-    // Hazard pattern - amber flash (adjustable by speed)
     if (currentMillis - lastUpdate >= (400 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
       if (patternStep) {
-        solidColor(255, 191, 0); // Amber/yellow color
+        solidColor(255, 191, 0);
       } else {
         solidColor(0, 0, 0);
       }
     }
   }
   else if (currentPattern == "ALTERNATE") {
-    // Alternate pattern - split strip flashes (adjustable by speed)
     if (currentMillis - lastUpdate >= (300 * speedMultiplier)) {
       lastUpdate = currentMillis;
       patternStep = !patternStep;
@@ -265,7 +278,6 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "RAINBOW") {
-    // Rainbow cycle pattern (adjustable by speed)
     if (currentMillis - lastUpdate >= (20 * speedMultiplier)) {
       lastUpdate = currentMillis;
       rainbow(patternStep);
@@ -273,7 +285,6 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "CHASE") {
-    // Chase pattern (adjustable by speed)
     if (currentMillis - lastUpdate >= (50 * speedMultiplier)) {
       lastUpdate = currentMillis;
       chase(red, green, blue, patternStep);
@@ -281,14 +292,12 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "SPARKLE") {
-    // Sparkle pattern (adjustable by speed)
     if (currentMillis - lastUpdate >= (100 * speedMultiplier)) {
       lastUpdate = currentMillis;
       sparkle(red, green, blue);
     }
   }
   else if (currentPattern == "FADE") {
-    // Fade in/out pattern (adjustable by speed)
     if (currentMillis - lastUpdate >= (30 * speedMultiplier)) {
       lastUpdate = currentMillis;
       uint8_t val = (sin(millis() / (1000.0 * speedMultiplier)) + 1.0) * 127.5;
@@ -296,7 +305,6 @@ void updatePattern() {
     }
   }
   else if (currentPattern == "RUNNING") {
-    // Running lights - theater chase (adjustable by speed)
     if (currentMillis - lastUpdate >= (100 * speedMultiplier)) {
       lastUpdate = currentMillis;
       runningLights(red, green, blue, patternStep);
@@ -308,7 +316,7 @@ void updatePattern() {
 // Pattern functions
 void solidColor(uint8_t r, uint8_t g, uint8_t b) {
   for (int i = 0; i < NUM_LEDS; i++) {
-    strip.setPixelColor(i, strip.Color(r, g, b, 0));
+    strip.setPixelColor(i, strip.Color(r, g, b));
   }
   strip.show();
 }
@@ -339,37 +347,30 @@ void sparkle(uint8_t r, uint8_t g, uint8_t b) {
   strip.setPixelColor(pixel, strip.Color(0, 0, 0));
 }
 
-// Police flash - alternating red/blue on left/right halves
 void policeFlash(bool step) {
   int halfPoint = NUM_LEDS / 2;
   for (int i = 0; i < NUM_LEDS; i++) {
     if (i < halfPoint) {
-      // Left half
       strip.setPixelColor(i, step ? strip.Color(255, 0, 0) : strip.Color(0, 0, 0));
     } else {
-      // Right half
       strip.setPixelColor(i, step ? strip.Color(0, 0, 0) : strip.Color(0, 0, 255));
     }
   }
   strip.show();
 }
 
-// Alternate flash - left/right halves flash in user color
 void alternateFlash(bool step) {
   int halfPoint = NUM_LEDS / 2;
   for (int i = 0; i < NUM_LEDS; i++) {
     if (i < halfPoint) {
-      // Left half
       strip.setPixelColor(i, step ? strip.Color(red, green, blue) : strip.Color(0, 0, 0));
     } else {
-      // Right half
       strip.setPixelColor(i, step ? strip.Color(0, 0, 0) : strip.Color(red, green, blue));
     }
   }
   strip.show();
 }
 
-// Running lights - theater chase style
 void runningLights(uint8_t r, uint8_t g, uint8_t b, int step) {
   for (int i = 0; i < NUM_LEDS; i++) {
     if ((i % 3) == step) {
@@ -381,7 +382,6 @@ void runningLights(uint8_t r, uint8_t g, uint8_t b, int step) {
   strip.show();
 }
 
-// Helper function for rainbow
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
   if (WheelPos < 85) {
@@ -393,24 +393,4 @@ uint32_t Wheel(byte WheelPos) {
   }
   WheelPos -= 170;
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-}
-
-// Helper function to check if string is all uppercase letters
-bool isUpperCase(String str) {
-  for (unsigned int i = 0; i < str.length(); i++) {
-    if (!isUpperCase(str.charAt(i))) {
-      return false;
-    }
-  }
-  return true;
-}
-
-// Helper function to check if string is all digits
-bool isDigits(String str) {
-  for (unsigned int i = 0; i < str.length(); i++) {
-    if (!isDigit(str.charAt(i))) {
-      return false;
-    }
-  }
-  return true;
 }

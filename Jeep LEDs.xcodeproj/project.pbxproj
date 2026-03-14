@@ -9,18 +9,131 @@
 /* Begin PBXBuildFile section */
 		982891E12F4B8B0600E8F5A9 /* ArduinoCode.txt in Resources */ = {isa = PBXBuildFile; fileRef = 982891E02F4B8B0600E8F5A9 /* ArduinoCode.txt */; };
 		982891E92F4BCFA700E8F5A9 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 982891E82F4BCFA700E8F5A9 /* AppIcon.icon */; };
+		98C6BD4F2F4FF23E007D09E2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 98C6BD4E2F4FF23E007D09E2 /* WidgetKit.framework */; };
+		98C6BD512F4FF23E007D09E2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 98C6BD502F4FF23E007D09E2 /* SwiftUI.framework */; };
+		98C6BD602F4FF23E007D09E2 /* Jeep LED WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 98C6BD4C2F4FF23E007D09E2 /* Jeep LED WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		98C6BD6F2F4FF2C1007D09E2 /* Intents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 98C6BD6E2F4FF2C1007D09E2 /* Intents.framework */; };
+		98C6BD7A2F4FF2C1007D09E2 /* IntentsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 98C6BD792F4FF2C1007D09E2 /* IntentsUI.framework */; };
+		98C6BD842F4FF2C1007D09E2 /* Jeep LEDs IntentsUI.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 98C6BD782F4FF2C1007D09E2 /* Jeep LEDs IntentsUI.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		98C6BD872F4FF2C1007D09E2 /* Jeep LEDs Intents.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 98C6BD6D2F4FF2C1007D09E2 /* Jeep LEDs Intents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		98C6BD5E2F4FF23E007D09E2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 982891C62F4B89F300E8F5A9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 98C6BD4B2F4FF23E007D09E2;
+			remoteInfo = "Jeep LED WidgetExtension";
+		};
+		98C6BD822F4FF2C1007D09E2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 982891C62F4B89F300E8F5A9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 98C6BD772F4FF2C1007D09E2;
+			remoteInfo = "Jeep LEDs IntentsUI";
+		};
+		98C6BD852F4FF2C1007D09E2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 982891C62F4B89F300E8F5A9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 98C6BD6C2F4FF2C1007D09E2;
+			remoteInfo = "Jeep LEDs Intents";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		98C6BD652F4FF23E007D09E2 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				98C6BD872F4FF2C1007D09E2 /* Jeep LEDs Intents.appex in Embed Foundation Extensions */,
+				98C6BD842F4FF2C1007D09E2 /* Jeep LEDs IntentsUI.appex in Embed Foundation Extensions */,
+				98C6BD602F4FF23E007D09E2 /* Jeep LED WidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		982891CE2F4B89F300E8F5A9 /* Jeep LEDs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Jeep LEDs.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		982891E02F4B8B0600E8F5A9 /* ArduinoCode.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ArduinoCode.txt; sourceTree = "<group>"; };
 		982891E82F4BCFA700E8F5A9 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		98C6BD4C2F4FF23E007D09E2 /* Jeep LED WidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Jeep LED WidgetExtension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		98C6BD4E2F4FF23E007D09E2 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		98C6BD502F4FF23E007D09E2 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		98C6BD6D2F4FF2C1007D09E2 /* Jeep LEDs Intents.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Jeep LEDs Intents.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		98C6BD6E2F4FF2C1007D09E2 /* Intents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Intents.framework; path = System/Library/Frameworks/Intents.framework; sourceTree = SDKROOT; };
+		98C6BD782F4FF2C1007D09E2 /* Jeep LEDs IntentsUI.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Jeep LEDs IntentsUI.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		98C6BD792F4FF2C1007D09E2 /* IntentsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IntentsUI.framework; path = System/Library/Frameworks/IntentsUI.framework; sourceTree = SDKROOT; };
+		98C6BD932F4FF79E007D09E2 /* Jeep LED WidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Jeep LED WidgetExtension.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		98C6BD612F4FF23E007D09E2 /* Exceptions for "Jeep LED Widget" folder in "Jeep LED WidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 98C6BD4B2F4FF23E007D09E2 /* Jeep LED WidgetExtension */;
+		};
+		98C6BD882F4FF2C1007D09E2 /* Exceptions for "Jeep LEDs Intents" folder in "Jeep LEDs Intents" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 98C6BD6C2F4FF2C1007D09E2 /* Jeep LEDs Intents */;
+		};
+		98C6BD8C2F4FF2C1007D09E2 /* Exceptions for "Jeep LEDs IntentsUI" folder in "Jeep LEDs IntentsUI" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 98C6BD772F4FF2C1007D09E2 /* Jeep LEDs IntentsUI */;
+		};
+		98C6BD912F4FF3AC007D09E2 /* Exceptions for "Jeep LEDs" folder in "Jeep LED WidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SharedLEDState.swift,
+			);
+			target = 98C6BD4B2F4FF23E007D09E2 /* Jeep LED WidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		982891D02F4B89F300E8F5A9 /* Jeep LEDs */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				98C6BD912F4FF3AC007D09E2 /* Exceptions for "Jeep LEDs" folder in "Jeep LED WidgetExtension" target */,
+			);
 			path = "Jeep LEDs";
+			sourceTree = "<group>";
+		};
+		98C6BD522F4FF23E007D09E2 /* Jeep LED Widget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				98C6BD612F4FF23E007D09E2 /* Exceptions for "Jeep LED Widget" folder in "Jeep LED WidgetExtension" target */,
+			);
+			path = "Jeep LED Widget";
+			sourceTree = "<group>";
+		};
+		98C6BD702F4FF2C1007D09E2 /* Jeep LEDs Intents */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				98C6BD882F4FF2C1007D09E2 /* Exceptions for "Jeep LEDs Intents" folder in "Jeep LEDs Intents" target */,
+			);
+			path = "Jeep LEDs Intents";
+			sourceTree = "<group>";
+		};
+		98C6BD7B2F4FF2C1007D09E2 /* Jeep LEDs IntentsUI */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				98C6BD8C2F4FF2C1007D09E2 /* Exceptions for "Jeep LEDs IntentsUI" folder in "Jeep LEDs IntentsUI" target */,
+			);
+			path = "Jeep LEDs IntentsUI";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -33,13 +146,43 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		98C6BD492F4FF23E007D09E2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98C6BD512F4FF23E007D09E2 /* SwiftUI.framework in Frameworks */,
+				98C6BD4F2F4FF23E007D09E2 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		98C6BD6A2F4FF2C1007D09E2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98C6BD6F2F4FF2C1007D09E2 /* Intents.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		98C6BD752F4FF2C1007D09E2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98C6BD7A2F4FF2C1007D09E2 /* IntentsUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		982891C52F4B89F300E8F5A9 = {
 			isa = PBXGroup;
 			children = (
+				98C6BD932F4FF79E007D09E2 /* Jeep LED WidgetExtension.entitlements */,
 				982891D02F4B89F300E8F5A9 /* Jeep LEDs */,
+				98C6BD522F4FF23E007D09E2 /* Jeep LED Widget */,
+				98C6BD702F4FF2C1007D09E2 /* Jeep LEDs Intents */,
+				98C6BD7B2F4FF2C1007D09E2 /* Jeep LEDs IntentsUI */,
+				98C6BD4D2F4FF23E007D09E2 /* Frameworks */,
 				982891CF2F4B89F300E8F5A9 /* Products */,
 				982891E02F4B8B0600E8F5A9 /* ArduinoCode.txt */,
 				982891E82F4BCFA700E8F5A9 /* AppIcon.icon */,
@@ -50,8 +193,22 @@
 			isa = PBXGroup;
 			children = (
 				982891CE2F4B89F300E8F5A9 /* Jeep LEDs.app */,
+				98C6BD4C2F4FF23E007D09E2 /* Jeep LED WidgetExtension.appex */,
+				98C6BD6D2F4FF2C1007D09E2 /* Jeep LEDs Intents.appex */,
+				98C6BD782F4FF2C1007D09E2 /* Jeep LEDs IntentsUI.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		98C6BD4D2F4FF23E007D09E2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				98C6BD4E2F4FF23E007D09E2 /* WidgetKit.framework */,
+				98C6BD502F4FF23E007D09E2 /* SwiftUI.framework */,
+				98C6BD6E2F4FF2C1007D09E2 /* Intents.framework */,
+				98C6BD792F4FF2C1007D09E2 /* IntentsUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -64,10 +221,14 @@
 				982891CA2F4B89F300E8F5A9 /* Sources */,
 				982891CB2F4B89F300E8F5A9 /* Frameworks */,
 				982891CC2F4B89F300E8F5A9 /* Resources */,
+				98C6BD652F4FF23E007D09E2 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				98C6BD5F2F4FF23E007D09E2 /* PBXTargetDependency */,
+				98C6BD832F4FF2C1007D09E2 /* PBXTargetDependency */,
+				98C6BD862F4FF2C1007D09E2 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				982891D02F4B89F300E8F5A9 /* Jeep LEDs */,
@@ -78,6 +239,72 @@
 			productName = "Jeep LEDs";
 			productReference = 982891CE2F4B89F300E8F5A9 /* Jeep LEDs.app */;
 			productType = "com.apple.product-type.application";
+		};
+		98C6BD4B2F4FF23E007D09E2 /* Jeep LED WidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 98C6BD622F4FF23E007D09E2 /* Build configuration list for PBXNativeTarget "Jeep LED WidgetExtension" */;
+			buildPhases = (
+				98C6BD482F4FF23E007D09E2 /* Sources */,
+				98C6BD492F4FF23E007D09E2 /* Frameworks */,
+				98C6BD4A2F4FF23E007D09E2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				98C6BD522F4FF23E007D09E2 /* Jeep LED Widget */,
+			);
+			name = "Jeep LED WidgetExtension";
+			packageProductDependencies = (
+			);
+			productName = "Jeep LED WidgetExtension";
+			productReference = 98C6BD4C2F4FF23E007D09E2 /* Jeep LED WidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		98C6BD6C2F4FF2C1007D09E2 /* Jeep LEDs Intents */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 98C6BD892F4FF2C1007D09E2 /* Build configuration list for PBXNativeTarget "Jeep LEDs Intents" */;
+			buildPhases = (
+				98C6BD692F4FF2C1007D09E2 /* Sources */,
+				98C6BD6A2F4FF2C1007D09E2 /* Frameworks */,
+				98C6BD6B2F4FF2C1007D09E2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				98C6BD702F4FF2C1007D09E2 /* Jeep LEDs Intents */,
+			);
+			name = "Jeep LEDs Intents";
+			packageProductDependencies = (
+			);
+			productName = "Jeep LEDs Intents";
+			productReference = 98C6BD6D2F4FF2C1007D09E2 /* Jeep LEDs Intents.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		98C6BD772F4FF2C1007D09E2 /* Jeep LEDs IntentsUI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 98C6BD8D2F4FF2C1007D09E2 /* Build configuration list for PBXNativeTarget "Jeep LEDs IntentsUI" */;
+			buildPhases = (
+				98C6BD742F4FF2C1007D09E2 /* Sources */,
+				98C6BD752F4FF2C1007D09E2 /* Frameworks */,
+				98C6BD762F4FF2C1007D09E2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				98C6BD7B2F4FF2C1007D09E2 /* Jeep LEDs IntentsUI */,
+			);
+			name = "Jeep LEDs IntentsUI";
+			packageProductDependencies = (
+			);
+			productName = "Jeep LEDs IntentsUI";
+			productReference = 98C6BD782F4FF2C1007D09E2 /* Jeep LEDs IntentsUI.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -90,6 +317,15 @@
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					982891CD2F4B89F300E8F5A9 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					98C6BD4B2F4FF23E007D09E2 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					98C6BD6C2F4FF2C1007D09E2 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					98C6BD772F4FF2C1007D09E2 = {
 						CreatedOnToolsVersion = 26.3;
 					};
 				};
@@ -109,6 +345,9 @@
 			projectRoot = "";
 			targets = (
 				982891CD2F4B89F300E8F5A9 /* Jeep LEDs */,
+				98C6BD4B2F4FF23E007D09E2 /* Jeep LED WidgetExtension */,
+				98C6BD6C2F4FF2C1007D09E2 /* Jeep LEDs Intents */,
+				98C6BD772F4FF2C1007D09E2 /* Jeep LEDs IntentsUI */,
 			);
 		};
 /* End PBXProject section */
@@ -123,6 +362,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		98C6BD4A2F4FF23E007D09E2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		98C6BD6B2F4FF2C1007D09E2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		98C6BD762F4FF2C1007D09E2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -133,7 +393,46 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		98C6BD482F4FF23E007D09E2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		98C6BD692F4FF2C1007D09E2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		98C6BD742F4FF2C1007D09E2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		98C6BD5F2F4FF23E007D09E2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 98C6BD4B2F4FF23E007D09E2 /* Jeep LED WidgetExtension */;
+			targetProxy = 98C6BD5E2F4FF23E007D09E2 /* PBXContainerItemProxy */;
+		};
+		98C6BD832F4FF2C1007D09E2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 98C6BD772F4FF2C1007D09E2 /* Jeep LEDs IntentsUI */;
+			targetProxy = 98C6BD822F4FF2C1007D09E2 /* PBXContainerItemProxy */;
+		};
+		98C6BD862F4FF2C1007D09E2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 98C6BD6C2F4FF2C1007D09E2 /* Jeep LEDs Intents */;
+			targetProxy = 98C6BD852F4FF2C1007D09E2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		982891D72F4B89F300E8F5A9 /* Debug */ = {
@@ -257,6 +556,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Jeep LEDs/Jeep LEDs.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -306,6 +606,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Jeep LEDs/Jeep LEDs.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -350,6 +651,195 @@
 			};
 			name = Release;
 		};
+		98C6BD632F4FF23E007D09E2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = "Jeep LED WidgetExtension.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DS243KQY84;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Jeep LED Widget/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Jeep LED Widget";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jtobrien.Jeep-LEDs.Jeep-LED-Widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		98C6BD642F4FF23E007D09E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = "Jeep LED WidgetExtension.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DS243KQY84;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Jeep LED Widget/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Jeep LED Widget";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jtobrien.Jeep-LEDs.Jeep-LED-Widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		98C6BD8A2F4FF2C1007D09E2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DS243KQY84;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Jeep LEDs Intents/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Jeep LEDs Intents";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jtobrien.Jeep-LEDs.Jeep-LEDs-Intents";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		98C6BD8B2F4FF2C1007D09E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DS243KQY84;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Jeep LEDs Intents/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Jeep LEDs Intents";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jtobrien.Jeep-LEDs.Jeep-LEDs-Intents";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		98C6BD8E2F4FF2C1007D09E2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DS243KQY84;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Jeep LEDs IntentsUI/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Jeep LEDs IntentsUI";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jtobrien.Jeep-LEDs.Jeep-LEDs-IntentsUI";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		98C6BD8F2F4FF2C1007D09E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DS243KQY84;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Jeep LEDs IntentsUI/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Jeep LEDs IntentsUI";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jtobrien.Jeep-LEDs.Jeep-LEDs-IntentsUI";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -367,6 +857,33 @@
 			buildConfigurations = (
 				982891DA2F4B89F300E8F5A9 /* Debug */,
 				982891DB2F4B89F300E8F5A9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		98C6BD622F4FF23E007D09E2 /* Build configuration list for PBXNativeTarget "Jeep LED WidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				98C6BD632F4FF23E007D09E2 /* Debug */,
+				98C6BD642F4FF23E007D09E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		98C6BD892F4FF2C1007D09E2 /* Build configuration list for PBXNativeTarget "Jeep LEDs Intents" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				98C6BD8A2F4FF2C1007D09E2 /* Debug */,
+				98C6BD8B2F4FF2C1007D09E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		98C6BD8D2F4FF2C1007D09E2 /* Build configuration list for PBXNativeTarget "Jeep LEDs IntentsUI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				98C6BD8E2F4FF2C1007D09E2 /* Debug */,
+				98C6BD8F2F4FF2C1007D09E2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

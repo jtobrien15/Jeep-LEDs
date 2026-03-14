@@ -104,14 +104,28 @@ class BluetoothManager: NSObject, ObservableObject {
     }
 
     // Send command to Arduino with queuing for reliability
-    func sendCommand(_ command: String) {
-        // Remove duplicate commands at the end of the queue to improve responsiveness
-        if let lastCommand = commandQueue.last, lastCommand == command {
-            print("⏭️ Skipping duplicate command: '\(command)'")
-            return
+    func sendCommand(_ command: String, priority: Bool = false) {
+        let queueSizeBefore = commandQueue.count
+        
+        // If priority command, clear conflicting commands from queue
+        if priority {
+            let commandType = String(command.prefix(1))
+            let removedCommands = commandQueue.filter { String($0.prefix(1)) == commandType }
+            commandQueue.removeAll { queuedCmd in
+                String(queuedCmd.prefix(1)) == commandType
+            }
+            
+            if !removedCommands.isEmpty {
+                print("⚡ PRIORITY: Cleared \(removedCommands.count) pending '\(commandType)' command(s)")
+                for cmd in removedCommands {
+                    print("   Removed: '\(cmd.trimmingCharacters(in: .whitespacesAndNewlines))'")
+                }
+            }
         }
         
         commandQueue.append(command)
+        print("📋 Queue: \(queueSizeBefore) → \(commandQueue.count) commands | Added: '\(command.trimmingCharacters(in: .whitespacesAndNewlines))'")
+        
         processCommandQueue()
     }
 
@@ -132,35 +146,41 @@ class BluetoothManager: NSObject, ObservableObject {
             return
         }
 
-        print("📤 Sending command: '\(command)' (\(data.count) bytes)")
+        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("📤 [\(timestamp)] SENDING COMMAND")
+        print("   Command: '\(command.trimmingCharacters(in: .whitespacesAndNewlines))'")
+        print("   Length: \(data.count) bytes")
         print("   Hex: \(data.map { String(format: "%02X", $0) }.joined(separator: " "))")
-        print("   ASCII: \(data.map { char in String(format: "'%c'(%02X)", char, char) }.joined(separator: " "))")
+        
+        // Decode the command type for clarity
+        let cmdType = command.first
+        let cmdDescription: String
+        switch cmdType {
+        case "C": cmdDescription = "COLOR"
+        case "P": cmdDescription = "PATTERN"
+        case "B": cmdDescription = "BRIGHTNESS"
+        case "S": cmdDescription = "SPEED"
+        default: cmdDescription = "UNKNOWN"
+        }
+        print("   Type: \(cmdDescription)")
 
-        // Send one byte at a time with optimized delays for SoftwareSerial reliability
+        // Send entire command at once for reliability
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let startTime = Date()
             
-            for (index, byte) in data.enumerated() {
-                let singleByte = Data([byte])
-                peripheral.writeValue(singleByte, for: characteristic, type: .withoutResponse)
-                
-                let char = String(format: "%c", byte)
-                let hex = String(format: "%02X", byte)
-                print("   [\(index)] Sent: '\(char)' (0x\(hex))")
-
-                // Optimized delays - command char needs more time
-                if index == 0 {
-                    Thread.sleep(forTimeInterval: 0.03) // 30ms after command char
-                } else {
-                    Thread.sleep(forTimeInterval: 0.01) // 10ms between data bytes
-                }
-            }
-
-            // Short wait before sending next command
-            Thread.sleep(forTimeInterval: 0.03)
+            // Send entire command in one write
+            peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
+            
+            let sendTime = Date().timeIntervalSince(startTime)
+            print("   ✓ Transmitted in \(Int(sendTime * 1000000))µs")
+            
+            // Wait for Arduino to process (allow 150ms for command to be received and processed)
+            Thread.sleep(forTimeInterval: 0.15)
             
             let elapsed = Date().timeIntervalSince(startTime)
-            print("✅ Command sent in \(Int(elapsed * 1000))ms")
+            print("✅ [\(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium))] Command complete (\(Int(elapsed * 1000))ms total)")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
             DispatchQueue.main.async {
                 self?.isProcessingCommand = false
@@ -170,32 +190,32 @@ class BluetoothManager: NSObject, ObservableObject {
     }
 
     // Send color command (RGB format)
-    func setColor(red: Int, green: Int, blue: Int) {
+    func setColor(red: Int, green: Int, blue: Int, priority: Bool = true) {
         let command = "C\(red),\(green),\(blue)\n"
-        sendCommand(command)
-        print("🎨 Color command queued: RGB(\(red),\(green),\(blue))")
+        sendCommand(command, priority: priority)
+        print("🎨 Color command queued: RGB(\(red),\(green),\(blue)) [Priority: \(priority)]")
     }
 
     // Send pattern command
-    func setPattern(_ pattern: String) {
+    func setPattern(_ pattern: String, priority: Bool = true) {
         let command = "P\(pattern)\n"
-        sendCommand(command)
-        print("✨ Pattern command queued: \(pattern)")
+        sendCommand(command, priority: priority)
+        print("✨ Pattern command queued: \(pattern) [Priority: \(priority)]")
     }
 
     // Send brightness command
-    func setBrightness(_ brightness: Int) {
+    func setBrightness(_ brightness: Int, priority: Bool = false) {
         let command = "B\(brightness)\n"
-        sendCommand(command)
+        sendCommand(command, priority: priority)
         print("🔆 Brightness command queued: \(brightness)")
     }
     
     // Send speed command (multiplier: 0.5 = fast, 1.0 = medium, 2.0 = slow)
-    func setSpeed(_ multiplier: Double) {
+    func setSpeed(_ multiplier: Double, priority: Bool = false) {
         // Convert multiplier to percentage (50 = fast, 100 = medium, 200 = slow)
         let speedPercent = Int(multiplier * 100)
         let command = "S\(speedPercent)\n"
-        sendCommand(command)
+        sendCommand(command, priority: priority)
         print("⚡ Speed command queued: \(speedPercent)% (multiplier: \(multiplier))")
     }
 }
@@ -210,8 +230,8 @@ extension BluetoothManager: CBCentralManagerDelegate {
             // Try to auto-reconnect to last device
             if shouldAutoReconnect, let lastID = lastConnectedDeviceID {
                 statusMessage = "Reconnecting to last device..."
-                if let peripherals = centralManager.retrievePeripherals(withIdentifiers: [lastID]) as? [CBPeripheral],
-                   let peripheral = peripherals.first {
+                let peripherals = centralManager.retrievePeripherals(withIdentifiers: [lastID])
+                if let peripheral = peripherals.first {
                     connect(to: peripheral)
                 } else {
                     // Device not found, scan for it
