@@ -122,6 +122,12 @@ struct ContentView: View {
                                     HapticManager.shared.selection()
                                     selectedColor = color
 
+                                    // If no pattern is set (e.g., after turning off), default to SOLID
+                                    if selectedPattern == nil {
+                                        selectedPattern = "SOLID"
+                                        bluetoothManager.setPattern("SOLID")
+                                    }
+
                                     // Send color command - keeps current pattern active
                                     let rgb = color.rgbComponents
                                     bluetoothManager.setColor(
